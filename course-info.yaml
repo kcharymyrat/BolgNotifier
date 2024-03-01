@@ -1,0 +1,13 @@
+type: hyperskill
+title: Blog Notifier
+language: English
+summary: "<p>Blog Notifier simplifies the task of managing your favorite blog sites.\
+  \ This tool helps you keep a watchlist of your favorite blog sites. With this tool,\
+  \ you receive email notifications whenever a new blog post gets published on any\
+  \ blog in your watchlist. Users can add or remove blog sites from their watchlists.</p><br/><br/>Learn\
+  \ more at <a href=\"https://hyperskill.org/projects/437?utm_source=ide&utm_medium=ide&utm_campaign=ide&utm_content=project-card\"\
+  >https://hyperskill.org/projects/437</a>"
+programming_language: Go
+content:
+  - Blog Notifier
+mode: Study

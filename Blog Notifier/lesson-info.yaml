@@ -1,0 +1,8 @@
+type: framework
+content:
+  - Parse Config
+  - Database Operations
+  - Find the links
+  - Blog Crawler
+  - Send Notification
+current_task: 0

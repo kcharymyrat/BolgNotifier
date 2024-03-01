@@ -1,0 +1,91 @@
+<div class="step-text">
+<h5 id="description">Description</h5>
+<p>In the project's first stage, you will create a Command Line Interface (CLI) with a key functionality: parsing <code class="language-go">.yaml</code> files. <strong>YAML</strong> is a human-readable data serialization standard for all programming languages. It is commonly used for configuration files and storing and transferring data in software applications.</p>
+<p>By parsing YAML files, the Blog Notifier CLI will be able to dynamically read and apply configurations for email notifications, server settings, and integration with messaging platforms like Telegram, tailoring its functionality to the specific needs of each blog monitoring scenario.</p>
+<h5 id="objectives">Objectives</h5>
+<p>Your task is to implement the <code class="language-go">--config</code> sub-command for the Blog Notifier CLI; this command should accept a filename as input, and the program needs to parse the provided YAML file to extract and display its contents.</p>
+<p>In Go, you can read and parse YAML files using the <code class="language-go">os</code> and <code class="language-go">yaml</code> packages; the process typically involves reading the file's contents and then unmarshalling (or decoding) these contents into a <code class="language-go">struct</code>. Here's a simplified example to illustrate this process.</p>
+<p>First, you can read the contents of a file <a href="https://pkg.go.dev/os#ReadFile" rel="noopener noreferrer nofollow" target="_blank">using the <code class="language-go">os.ReadFile</code> function from the <code class="language-go">os</code> package</a>:</p>
+<pre><code class="language-go">configFile := "credentials.yaml"
+data, err := os.ReadFile(configFile)
+if err != nil {
+    fmt.Printf("file '%s' not found\n", configFile)
+    return
+}</code></pre>
+<p>Next, to interpret the YAML contents, you'll use the <a href="https://pkg.go.dev/gopkg.in/yaml.v2#Unmarshal" rel="noopener noreferrer nofollow" target="_blank"><code class="language-go">yaml.Unmarshal</code> function</a> from the <a href="https://gopkg.in/yaml.v3" rel="noopener noreferrer nofollow" target="_blank"><code class="language-go">gopkg.in/yaml.v3</code> YAML parsing package</a>:</p>
+<pre><code class="language-go">err = yaml.Unmarshal(data, &amp;configStruct)
+if err != nil {
+    fmt.Printf("cannot unmarshal the config file '%s'\n", configFile)
+    return
+}</code></pre>
+<p>Integrating this process into your CLI tool will enable it to effectively read and apply configurations from YAML files.</p>
+<p>After correctly parsing the YAML file, the output of your program should consist of the following lines:</p>
+<ol>
+<li>The first line should print the message <code class="language-go">mode: &lt;mode&gt;</code>. Replace <code class="language-go">&lt;mode&gt;</code> with the <code class="language-go">mode</code> setting value from the YAML file.</li>
+<li>On the second line, display the message <code class="language-go">email_server: &lt;host&gt;:&lt;port&gt;</code>, where <code class="language-go">&lt;host&gt;</code> and <code class="language-go">&lt;port&gt;</code> are the respective values found under the <code class="language-go">server</code> section in the YAML file.</li>
+<li>The third line should display the message <code class="language-go">&lt;email&gt; &lt;password&gt; &lt;recipient&gt;</code>, substituting <code class="language-go">&lt;email&gt;</code>, <code class="language-go">&lt;password&gt;</code>, and <code class="language-go">&lt;recipient&gt;</code> with the corresponding values under the <code class="language-go">client</code> section in the YAML file.</li>
+<li>Finally, the fourth line should display the message <code class="language-go">&lt;bot_token&gt;@&lt;channel&gt;</code>, replace <code class="language-go">&lt;bot_token&gt;</code> and <code class="language-go">&lt;channel&gt;</code> with the respective values under the <code class="language-go">telegram</code> section in the YAML file.</li>
+</ol>
+<p>Additionally, you must ensure that the Blog Notifier CLI is robust, handling the following error scenarios gracefully:</p>
+<ul>
+<li>If the specified YAML file does NOT exist, the program should output an error message: <code class="language-go">file 'nonexistent.yaml' not found</code>.</li>
+<li>If the <code class="language-go">--config</code> command is missing or not specified, the program should output: <code class="language-go">no command input specified</code>.</li>
+</ul>
+<p>For a better understanding of the format and structure of the expected output, please reference the YAML files and commands provided in the Examples section below.</p>
+<h5 id="examples">Examples</h5>
+<p><strong>Example 1: Valid YAML file (Email Mode)</strong></p>
+<p>When executing the command:</p>
+<pre><code class="language-bash">blognotifier --config "credentials.yaml"</code></pre>
+<p>For the given YAML file:</p>
+<pre><code class="language-yaml">mode: mail
+
+server:
+  host: smtp.gmail.com
+  port: 465
+
+client:
+  email: sender@example.com
+  password: 123456
+  send_to: recipient@example.net
+
+telegram:
+  bot_token: abcdef123456
+  channel: mychannel</code></pre>
+<p>The program should output the following lines to the console:</p>
+<pre><code class="language-no-highlight">mode: mail
+email_server: smtp.gmail.com:465
+client: sender@example.com 123456 recipient@example.net
+telegram: abcdef123456@mychannel</code></pre>
+<p><strong>Example 2: Valid YAML File (Telegram Mode)</strong></p>
+<p>When executing the command:</p>
+<pre><code class="language-bash">blognotifier --config "credentials.yaml"</code></pre>
+<p>For the given YAML file:</p>
+<pre><code class="language-yaml">mode: telegram
+
+server:
+  host: 127.0.0.1
+  port: 2500
+
+client:
+  email: sender@example.com
+  password: secret
+  send_to: recipient@example.net
+
+telegram:
+  bot_token: abcd1234
+  channel: mychannel</code></pre>
+<p>The program should output the following lines to the console:</p>
+<pre><code class="language-no-highlight">mode: telegram
+email_server: 127.0.0.1:2500
+client: sender@example.com 123456 recipient@example.net
+telegram: abcd1234@mychannel</code></pre>
+<p><strong>Example 3: Non-Existent YAML file</strong></p>
+<p>When executing the command with a YAML file that does NOT exist, the program should output the following error message:</p>
+<pre><code class="language-bash">blognotifier --config "nonexistent.yaml"
+file 'nonexistent.yaml' not found</code></pre>
+<p><strong>Example 4: No command input</strong></p>
+<p>When you run the program without any commands, the program should output the following error message:</p>
+<pre><code class="language-bash">blognotifier
+no command input specified</code></pre>
+
+</div>

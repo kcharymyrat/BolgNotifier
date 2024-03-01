@@ -1,0 +1,645 @@
+type: remote_edu
+files:
+  - name: main.go
+    visible: true
+    text: "package main\n\nimport \"fmt\"\n\nfunc main() {\n\t// Write your code solution\
+    \ for the project below.\n\tfmt.Println(\"Hello, World!\")\n}\n"
+    learner_created: false
+  - name: test/__init__.py
+    visible: false
+    learner_created: false
+  - name: test/blognotifier_test_utils.py
+    visible: false
+    text: "import random, os, socketserver, http.server, shutil, sqlite3\nfrom string\
+    \ import Template\nfrom multiprocessing import Queue\nfrom aiosmtpd.controller\
+    \ import Controller\nfrom aiosmtpd.smtp import Envelope\n\nDB_FILE = 'blogs.sqlite3'\n\
+    NO_LINKS_TEST = 'no_links'\nFLAT_MULTIPLE_LINKS_TEST = 'flat_multiple_links'\n\
+    NESTED_LINKS_TEST_1 = 'nested_links_1'\nNESTED_LINKS_TEST_2 = 'nested_links_2'\n\
+    NESTED_LINKS_TEST_3 = 'nested_links_3'\nNESTED_AND_FLAT_LINKS_TEST = 'nested_and_flat_links'\n\
+    \nFAKE_BLOG = \"fake-blog\"\nblog_addr = f\"http://localhost:8000/{FAKE_BLOG}/\"\
+    \n\ntables_properties = {\n    'blogs': {\n        'site': 'TEXT',\n        'last_link':\
+    \ 'TEXT'\n    },\n    'posts': {\n        'link': 'TEXT',\n        'site': 'TEXT'\n\
+    \    },\n    'mails': {\n        'id': 'INTEGER',\n        'mail': 'TEXT',\n \
+    \       'is_sent': 'INTEGER'\n    }\n}\n\npage_template = \"\"\"<!DOCTYPE html>\n\
+    <html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\"\
+    \ content=\"width=device-width, initial-scale=1.0\">\n    <title>Random Blog Post</title>\n\
+    \    <style>\n        body {\n            font-family: Arial, sans-serif;\n  \
+    \          line-height: 1.6;\n            max-width: 800px;\n            margin:\
+    \ 0 auto;\n            padding: 20px;\n        }\n        .post {\n          \
+    \  margin-bottom: 20px;\n            border: 1px solid #ccc;\n            padding:\
+    \ 15px;\n            border-radius: 8px;\n            background-color: #fff;\n\
+    \        }\n\n        h1 {\n            color: #333;\n        }\n\n        p {\n\
+    \            color: #666;\n            word-break: break-all;\n            white-space:\
+    \ normal;\n        }\n\n        a {\n            color: #007BFF;\n           \
+    \ text-decoration: none;\n            font-weight: bold;\n        }\n\n      \
+    \  a:hover {\n            text-decoration: underline;\n        }\n    </style>\n\
+    </head>\n<body>\n    $body        \n</body>\n</html>\"\"\"\n\nlink_template =\
+    \ \"\"\"<div class=\"post\">\n    <p><a href=\"$postaddr\">$name</a></p>\n</div>\"\
+    \"\"\n\npost_template = \"\"\"<div class=\"post\">\n        <p>$body</p>\n   \
+    \ </div>\"\"\"\n\nhtml_files = []  # stores the names os all the html files created\
+    \ for test cases. used for cleaning purposes at the end\nblog_files = {}  # stores\
+    \ the html file names used in test cases\n\n\n# controller_info = {}  # used for\
+    \ storing the default smtp server address\n\n\ndef check_table_exists(table_name:\
+    \ str) -> bool:\n    connection = sqlite3.connect(DB_FILE)  # Replace 'your_database.db'\
+    \ with your database file\n    # Create a cursor object\n    cursor = connection.cursor()\n\
+    \    cursor.execute(f\"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'\"\
+    )\n    # Fetch the result\n    result = cursor.fetchone()\n    cursor.close()\n\
+    \    connection.close()\n    return result is not None\n\n\ndef check_table_properties(table_name)\
+    \ -> tuple:\n    # Connect to the SQLite database\n    connection = sqlite3.connect(DB_FILE)\
+    \  # Replace 'your_database.db' with your database file\n    # Create a cursor\
+    \ object\n    cursor = connection.cursor()\n    cursor.execute(f\"PRAGMA table_info({table_name})\"\
+    )\n    # Fetch all the rows from the result\n    columns_info = cursor.fetchall()\n\
+    \    columns_info = {column[1]: column[2] for column in columns_info}\n    cursor.close()\n\
+    \    connection.close()\n    return (tables_properties[table_name] == columns_info,\
+    \ columns_info)\n\n\ndef remove_db_file():\n    if os.path.exists(DB_FILE):\n\
+    \        os.remove(DB_FILE)\n\n\ndef remove_fake_blog():\n    folder_path = os.path.join(os.getcwd(),\
+    \ FAKE_BLOG)\n    shutil.rmtree(folder_path)\n\n\ndef create_html_file(file_name,\
+    \ content):\n    folder_path = os.path.join(os.getcwd(), FAKE_BLOG)\n    if not\
+    \ os.path.exists(folder_path):\n        os.makedirs(folder_path)\n    file_path\
+    \ = os.path.join(folder_path, file_name)\n    with open(file_path, 'w') as file:\n\
+    \        file.write(content)\n\n\ndef generate_random_text(k: int) -> str:\n \
+    \   return \"\".join(random.choices(\"abcdefghijklmnopqrstuvwxyz123456789\", k=k))\n\
+    \n\nconfig_map = {\n    'mode': 'mail',\n    'server': {\n        'host': '127.0.0.1',\n\
+    \        'port': 8025\n    },\n    'client': {\n        'email': 'this field will\
+    \ be populated at run time',\n        'password': 'this field will be populated\
+    \ at run time',\n        'send_to': 'this field will be populated at run time'\n\
+    \    },\n    'telegram': {\n        'bot_token': generate_random_text(k=7),\n\
+    \        'channel': generate_random_text(k=6)\n    }\n}\n\n\n# only one html file\
+    \ containing no links will be created\ndef create_blog_site_with_no_posts():\n\
+    \    name = generate_random_text(4)\n    body = f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'\n\
+    \    t = Template(page_template)\n    blog_page = t.substitute({'body': body})\n\
+    \    create_html_file(f'{name}.html', blog_page)\n    html_files.append(f'{name}.html')\n\
+    \    blog_files[NO_LINKS_TEST] = f'{blog_addr}{name}.html'\n\n\n# this will create\
+    \ a website with the following pattern, index.html will contain links to multiple\
+    \ blog posts.\n# these blog posts will not contain any links thus, the site created\
+    \ has a flat structure\ndef create_flat_blog_site_with_multiple_posts():\n   \
+    \ n = random.randint(3, 5)\n    l = \"\"\n    blog_files['flat_multiple_links']\
+    \ = []\n    for i in range(n):\n        name = generate_random_text(k=4)\n   \
+    \     postaddr = f\"{blog_addr}{name}.html\"\n        t = Template(link_template)\n\
+    \        l += t.substitute({'postaddr': postaddr, 'name': name})\n        create_html_file(f'{name}.html',\n\
+    \                         Template(page_template).substitute(\n              \
+    \               {'body': f'<div class = \"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name}.html')\n        blog_files[FLAT_MULTIPLE_LINKS_TEST].append(f'{blog_addr}{name}.html')\n\
+    \n    t = Template(page_template)\n    blog_page = t.substitute({'body': l})\n\
+    \    create_html_file(\"index.html\", blog_page)\n    html_files.append(\"index.html\"\
+    )\n    blog_files[FLAT_MULTIPLE_LINKS_TEST].append(blog_addr)\n\n\ndef _create_blog_site_with_nested_posts(depth:\
+    \ int, test_name):\n    if depth == 1:\n        name0 = generate_random_text(k=4)\n\
+    \        create_html_file(f'{name0}.html',\n                         Template(page_template).substitute(\n\
+    \                             {'body': f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name0}.html')\n        blog_files[test_name].append(f'{blog_addr}{name0}.html')\n\
+    \        t = Template(link_template)\n        l = t.substitute({'postaddr': f'{blog_addr}{name0}.html',\
+    \ 'name': name0})\n        name1 = generate_random_text(k=4)\n        create_html_file(f'{name1}.html',\
+    \ Template(page_template).substitute({'body': l}))\n        html_files.append(f'{name1}.html')\n\
+    \        blog_files[test_name].append(f'{blog_addr}{name1}.html')\n        return\
+    \ name1\n    name0 = _create_blog_site_with_nested_posts(depth - 1, test_name)\n\
+    \    t = Template(link_template)\n    l = t.substitute({'postaddr': f'{blog_addr}{name0}.html',\
+    \ 'name': name0})\n    name1 = generate_random_text(k=4)\n    create_html_file(f'{name1}.html',\
+    \ Template(page_template).substitute({'body': l}))\n    html_files.append(f'{name1}.html')\n\
+    \    blog_files[test_name].append(f'{blog_addr}{name1}.html')\n    return name1\n\
+    \n\n# this will create website with the following pattern: a.html contains link\
+    \ to b.html, b.html contains link to\n# c.html, c.html contain link to d.html.\
+    \ depending on the parameter depth, this is created for the test to ensure\n#\
+    \ that the blog crawler does not go into endless recursion.\ndef create_blog_site_with_nested_posts(depth:\
+    \ int, test_name: str):\n    blog_files[test_name] = []\n    parent_name = _create_blog_site_with_nested_posts(depth,\
+    \ test_name)\n    return parent_name\n\n\n# a blog with the following pattern\
+    \ will be created: a blog site with links to multiple blog posts, Some of these\n\
+    # blog posts can have nested links. some blog posts have nested and others have\
+    \ flat pattern\ndef create_blog_site_with_nested_and_flat_posts():\n    def visualize_nested_blogs(blog_posts_list:\
+    \ list, viz_file_name: str):\n        l = \"\"\n        n = 0\n        for el\
+    \ in blog_posts_list:\n            l += f'{\" \" * n}{el}\\n'\n            n +=\
+    \ 1\n        with open(viz_file_name, 'w') as f:\n            f.write(l)\n\n \
+    \   blog_files[NESTED_AND_FLAT_LINKS_TEST] = []\n    # creating blog posts with\
+    \ no links in them\n    n = random.randint(3, 5)\n    l = \"\"\n    for i in range(n):\n\
+    \        name = generate_random_text(k=4)\n        postaddr = f\"{blog_addr}{name}.html\"\
+    \n        t = Template(link_template)\n        l += t.substitute({'postaddr':\
+    \ postaddr, 'name': name})\n        create_html_file(f'{name}.html',\n       \
+    \                  Template(page_template).substitute(\n                     \
+    \        {'body': f'<div class = \"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name}.html')\n        blog_files[NESTED_AND_FLAT_LINKS_TEST].append(postaddr)\n\
+    \n    # creating blog posts with nested links of depth 2\n    nested_post_1 =\
+    \ create_blog_site_with_nested_posts(depth=1, test_name='nested_links_1')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_1}.html\"\
+    , 'name': nested_post_1})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_1'][-1::-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_2'][-1::-1], 'nested_links_2.txt')\n\
+    \n    # creating blog posts with nested links of depth 3\n    nested_post_2 =\
+    \ create_blog_site_with_nested_posts(depth=2, test_name='nested_links_2')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_2}.html\"\
+    , 'name': nested_post_2})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_2'][-1::-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_3'][-1::-1], 'nested_links_3.txt')\n\
+    \n    t = Template(page_template)\n    blog_page = t.substitute({'body': l})\n\
+    \    create_html_file(\"index2.html\", blog_page)\n    html_files.append(\"index2.html\"\
+    )\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].append(f'{blog_addr}index2.html')\n\
+    \n\ndef run_http_server(port):\n    # Create an HTTP server with the specified\
+    \ port and handler\n    try:\n        handler = http.server.SimpleHTTPRequestHandler\n\
+    \        with socketserver.TCPServer((\"\", port), handler) as httpd:\n      \
+    \      print(f\"Serving on port {port}\")\n            httpd.serve_forever()\n\
+    \    finally:\n        print('from run_http_server func: http server stopped')\n\
+    \n\ndef create_yaml_file(file_name, content):\n    with open(file_name, 'w') as\
+    \ file:\n        file.write(content)\n\n\ndef remove_yaml_file(file_name):\n \
+    \   if os.path.exists(file_name):\n        os.remove(file_name)\n\n\n# mail_queue:\
+    \ Queue  # = Queue()  # aiosmtpd server will put mails it receives from the program\
+    \ in this queue\n# stop_server_signal_queue: Queue  # = Queue()  # is used to\
+    \ send signal when to stop aiosmtpd server\n\n\nclass MyHandler:\n    def __init__(self,\
+    \ queue: Queue):\n        self.queue = queue\n\n    async def handle_DATA(self,\
+    \ server, session, envelope: Envelope):\n        # mail = json.loads(envelope.content.decode('utf8',\
+    \ errors='replace'))\n        print(envelope.content)\n        self.queue.put({\n\
+    \            'from': envelope.mail_from,\n            'to': envelope.rcpt_tos[0],\n\
+    \            'message': envelope.content.decode('utf8', errors='replace')\n  \
+    \      })\n        return '250 Message accepted for delivery'\n\n\ndef start_smtp_server(mail_queue:\
+    \ Queue, stop_server_signal_queue: Queue):\n    handler = MyHandler(mail_queue)\n\
+    \    controller = Controller(handler, hostname='127.0.0.1', port=8025)\n    controller.start()\n\
+    \    print('smtp server started')\n    mail_queue.put(controller.hostname)\n \
+    \   mail_queue.put(controller.port)\n    # blocks until stop signal is received,\
+    \ this is necessary to ensure the server is not closed prematurely\n    stop_server_signal_queue.get()\n\
+    \    controller.stop()\n"
+    learner_created: false
+  - name: test/tests.py
+    visible: false
+    text: |
+      import multiprocessing, yaml
+      from .blognotifier_test_utils import *
+      
+      from hstest import StageTest, TestedProgram, CheckResult, dynamic_test
+      
+      
+      class TestBlogNotifierCLI(StageTest):
+          def __init__(self, *args, **kwargs):
+              super().__init__()
+              for arg in args:
+                  print(arg)
+              for k, v in kwargs.items():
+                  print(f"{k}: {v}")
+              self.mail_queue = args[0]  # kwargs['mail_queue']
+              self.stop_server_signal_queue = args[1]  # kwargs['stop_server_signal_queue']
+      
+          @dynamic_test(time_limit=120000)
+          def test1_migrate_command(self):
+              # Test the --migrate sub-command which creates the blogs.sqlite3 database and tables
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate").strip().lower()
+      
+              for table_name in tables_properties:
+                  if check_table_exists(table_name) is False:
+                      raise CheckResult.wrong(f"The --migrate command did not create the '{table_name}' table.")
+                  temp = check_table_properties(table_name)
+                  if temp[0] is False:
+                      raise CheckResult.wrong(
+                          f"Wrong column types for '{table_name}' table. Expected column types for the '{table_name}' table are {tables_properties[table_name]}. Found {temp[1]}")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test2_crawling_with_no_hyperlinks(self):
+              # Test the crawl flag and list-posts sub-command.
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NO_LINKS_TEST]
+              program.start('--explore', blog)
+              program = TestedProgram()
+              program.start("sync", "--conf", "credentials.yaml")
+      
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog_files[NO_LINKS_TEST])
+      
+              output.strip()
+      
+              # Expected links from the example output
+              expected_output = ""
+      
+              # Check if all expected links are present in the output
+              if expected_output != output:
+                  return CheckResult.wrong(
+                      f"The output of the program does not match the expected output for the list-posts sub-command."
+                      f"\nYour program output: {output}"
+                      f"\nExpected output: {expected_output}")
+      
+              program = TestedProgram()
+              output = program.start("--list")
+      
+              output.strip()
+      
+              if f'{blog} {blog}' not in output:
+                  return CheckResult.wrong("list flag returned wrong output. 'last_link' cloumn in the blogs table must be "
+                                           "only updated when new blog-post for that blog site are found")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test3_crawling_with_nested_links_a(self):
+              # Test the crawl flag and list-posts sub-command for blog with one blog-posts.
+              # prepping for tests
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_LINKS_TEST_1][-1]
+              program.start('--explore', blog)
+              config_map['client']['email'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              config_map['client']['password'] = generate_random_text(10)
+              config_map['client']['send_to'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              yaml_content = yaml.dump(config_map)
+              create_yaml_file('credentials.yaml', yaml_content)
+      
+              # testing sync command
+              program = TestedProgram()
+              program.start("sync", "--conf", "credentials.yaml")
+      
+              # checking if the mails were actually sent
+              expected_msgs = [
+                  f'New blog-post {blog_files[NESTED_LINKS_TEST_1][0]} on blog {blog_files[NESTED_LINKS_TEST_1][-1]}']
+              for i in range(len(expected_msgs)):
+                  msg = self.mail_queue.get()
+                  if msg.get('from', "") != config_map['client']['email']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected sender_email: {config_map['client']['email']}, got sender_email: "
+                          f"{msg.get('from', '')}")
+                  if msg.get('to', "") != config_map['client']['send_to']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected receiver_email: {config_map['client']['send_to']}, got receiver_email: "
+                          f"{msg.get('to', '')}")
+                  if expected_msgs[0] not in msg.get('message', ""):
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected message: {expected_msgs[0]}, output message: {msg.get('message', '')}")
+      
+              # testing if the posts table in the database was updated with correct values
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+              output.strip()
+              # Expected links from the example output
+              expected_output = blog_files[NESTED_LINKS_TEST_1][0]
+              # Check if all expected links are present in the output
+              if expected_output not in output:
+                  return CheckResult.wrong(
+                      f"Test was carried out for blog site with just one blog post expected_output: {expected_output} program_output: {output}")
+      
+              # testing if the last_link column in the blogs table was updated
+              program = TestedProgram()
+              output = program.start("--list")
+              output.strip()
+              if f'{blog} {expected_output}' in output:
+                  return CheckResult.correct()
+              return CheckResult.wrong(
+                  f"Test was carried out for blog site with just one hyperlink, seams like the last_link column in the blogs "
+                  f"table is not updated after crawling")
+      
+          @dynamic_test(time_limit=120000)
+          def test4_crawling_with_nested_links_b(self):
+              # Test the crawl flag and list-posts sub-command for blog with 2 nested blog-posts.
+              # prepping for the test
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_LINKS_TEST_2][-1]
+              program.start('--explore', blog)
+              config_map['client']['email'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              config_map['client']['password'] = generate_random_text(10)
+              config_map['client']['send_to'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              yaml_content = yaml.dump(config_map)
+              create_yaml_file('credentials.yaml', yaml_content)
+      
+              # testing sync command
+              program = TestedProgram()
+              program.start("sync", "--conf", "credentials.yaml")
+      
+              # testing if the mails were actually sent
+              expected_msgs = [f'New blog-post {blog_post} on blog {blog_files[NESTED_LINKS_TEST_2][-1]}' for blog_post in
+                               blog_files[NESTED_LINKS_TEST_2][:-1]]
+              for i in range(len(expected_msgs)):
+                  msg = self.mail_queue.get()
+                  if msg.get('from', "") != config_map['client']['email']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected sender_email: {config_map['client']['email']}, got sender_email: "
+                          f"{msg.get('from', '')}")
+                  if msg.get('to', "") != config_map['client']['send_to']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected receiver_email: {config_map['client']['send_to']}, got receiver_email: "
+                          f"{msg.get('to', '')}")
+                  found = False
+                  e_msg = ""
+                  for expected_msg in expected_msgs:
+                      e_msg = expected_msg
+                      if expected_msg in msg.get('message', ""):
+                          found = True
+                          break
+                  if not found:
+                      CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected message: {e_msg}")
+      
+              # testing if the posts table in the database was updated with correct values
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+              output.strip()
+              # Expected links from the example output
+              expected_output = blog_files[NESTED_LINKS_TEST_2][:-1]
+              # Check if all expected links are present in the output
+              for link in expected_output:
+                  if link not in output:
+                      return CheckResult.wrong(f"Test was carried out for blog site with two blog posts {link} not found in "
+                                               f"the program output")
+      
+              # testing if the last_link column in the blogs table was updated
+              program = TestedProgram()
+              output = program.start("--list")
+              output.strip()
+              for link in expected_output:
+                  if f'{blog} {link}' in output:
+                      return CheckResult.correct()
+              return CheckResult.wrong(
+                  f"Test was carried out for blog site with two nested blog posts seems like the last_link column in the "
+                  f"blogs"
+                  f"table is not updated after crawling")
+      
+          @dynamic_test(time_limit=120000)
+          def test5_crawling_with_nested_links_c(self):
+              # Test the crawl flag and list-posts sub-command for blog with 3 nested blog-posts.
+              # prepping for the test
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_LINKS_TEST_3][-1]
+              program.start('--explore', blog)
+              config_map['client']['email'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              config_map['client']['password'] = generate_random_text(10)
+              config_map['client']['send_to'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              yaml_content = yaml.dump(config_map)
+              create_yaml_file('credentials.yaml', yaml_content)
+      
+              # testing sync command
+              program = TestedProgram()
+              program.start("sync", "--conf", "credentials.yaml")
+      
+              # testing if the mails were actually sent
+              expected_msgs = [f'New blog-post {blog_post} on blog {blog_files[NESTED_LINKS_TEST_3][-1]}' for blog_post in
+                               blog_files[NESTED_LINKS_TEST_3][:-1]]
+              for i in range(len(expected_msgs)):
+                  msg = self.mail_queue.get()
+                  if msg.get('from', "") != config_map['client']['email']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected sender_email: {config_map['client']['email']}, got sender_email: "
+                          f"{msg.get('from', '')}")
+                  if msg.get('to', "") != config_map['client']['send_to']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected receiver_email: {config_map['client']['send_to']}, got receiver_email: "
+                          f"{msg.get('to', '')}")
+                  found = False
+                  e_msg = ""
+                  for expected_msg in expected_msgs:
+                      e_msg = expected_msg
+                      if expected_msg in msg.get('message', ""):
+                          found = True
+                          break
+                  if not found:
+                      CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected message: {e_msg}")
+      
+              # testing if the posts table in the database was updated with correct values
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+              output.strip()
+              # Expected links from the example output
+              expected_output = blog_files[NESTED_LINKS_TEST_3][:-1]
+              # Check if all expected links are present in the output
+              for link in expected_output:
+                  if link not in output:
+                      return CheckResult.wrong(
+                          f"Test was carried out for blog site with three nested blog posts {link} not found in "
+                          f"the program output")
+      
+              # testing if the last_link column in the blogs table was updated
+              program = TestedProgram()
+              output = program.start("--list")
+              output.strip()
+              for link in expected_output:
+                  if f'{blog} {link}' in output:
+                      return CheckResult.correct()
+              return CheckResult.wrong(
+                  f"Test was carried out for blog site with three nested blog posts, seems like the last_link column in the "
+                  f"blogs table is not updated after crawling")
+      
+          @dynamic_test(time_limit=120000)
+          def test6_crawling_with_flat_multiple_pages(self):
+              # Test the crawl flag and list-posts sub-command for blog with many blog-posts.
+              # prepping for the test
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[FLAT_MULTIPLE_LINKS_TEST][-1]
+              program.start('--explore', blog)
+              config_map['client']['email'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              config_map['client']['password'] = generate_random_text(10)
+              config_map['client']['send_to'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              yaml_content = yaml.dump(config_map)
+              create_yaml_file('credentials.yaml', yaml_content)
+      
+              # testing sync command
+              program = TestedProgram()
+              program.start("sync", "--conf", "credentials.yaml")
+      
+              # testing if the mails were actually sent
+              expected_msgs = [f'New blog-post {blog_post} on blog {blog_files[FLAT_MULTIPLE_LINKS_TEST][-1]}' for blog_post
+                               in blog_files[FLAT_MULTIPLE_LINKS_TEST][:-1]]
+              for i in range(len(expected_msgs)):
+                  msg = self.mail_queue.get()
+                  if msg.get('from', "") != config_map['client']['email']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected sender_email: {config_map['client']['email']}, got sender_email: "
+                          f"{msg.get('from', '')}")
+                  if msg.get('to', "") != config_map['client']['send_to']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected receiver_email: {config_map['client']['send_to']}, got receiver_email: "
+                          f"{msg.get('to', '')}")
+                  found = False
+                  e_msg = ""
+                  for expected_msg in expected_msgs:
+                      e_msg = expected_msg
+                      if expected_msg in msg.get('message', ""):
+                          found = True
+                          break
+                  if not found:
+                      CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected message: {e_msg}")
+      
+              # testing if the posts table in the database was updated with correct values
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+              output.strip()
+              # Expected links from the example output
+              expected_output = blog_files[FLAT_MULTIPLE_LINKS_TEST][:-1]
+              # Check if all expected links are present in the output
+              for link in expected_output:
+                  if link not in output:
+                      return CheckResult.wrong(
+                          f"Test was carried out for blog site with multiple blog posts {link} not found in "
+                          f"the program output")
+      
+              # testing if the last_link column in the blogs table was updated
+              program = TestedProgram()
+              output = program.start("--list")
+              output.strip()
+              for link in expected_output:
+                  if f'{blog} {link}' in output:
+                      return CheckResult.correct()
+              return CheckResult.wrong(
+                  f"Test was carried out for blog site with multiple blog posts seems like the last_link column in the blogs "
+                  f"table is not updated after crawling")
+      
+          @dynamic_test(time_limit=120000)
+          def test7_crawling_with_nested_and_flat_posts(self):
+              # Test the crawl flag and list-posts sub-command for blog with many blog-posts (flat and nested).
+              # prepping for the test
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_AND_FLAT_LINKS_TEST][-1]
+              program.start('--explore', blog)
+              config_map['client']['email'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              config_map['client']['password'] = generate_random_text(10)
+              config_map['client']['send_to'] = f'{generate_random_text(6)}.{random.choice(["com", "net"])}'
+              yaml_content = yaml.dump(config_map)
+              create_yaml_file('credentials.yaml', yaml_content)
+      
+              # testing sync command
+              program = TestedProgram()
+              program.start("sync", "--conf", "credentials.yaml")
+      
+              # testing if the mails were actually sent
+              expected_msgs = [f'New blog-post {blog_post} on blog {blog_files[NESTED_AND_FLAT_LINKS_TEST][-1]}' for blog_post
+                               in blog_files[NESTED_AND_FLAT_LINKS_TEST][:-1]]
+              for i in range(len(expected_msgs)):
+                  msg = self.mail_queue.get()
+                  if msg.get('from', "") != config_map['client']['email']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected sender_email: {config_map['client']['email']}, got sender_email: "
+                          f"{msg.get('from', '')}")
+                  if msg.get('to', "") != config_map['client']['send_to']:
+                      return CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected receiver_email: {config_map['client']['send_to']}, got receiver_email: "
+                          f"{msg.get('to', '')}")
+                  found = False
+                  e_msg = ""
+                  for expected_msg in expected_msgs:
+                      e_msg = expected_msg
+                      if expected_msg in msg.get('message', ""):
+                          found = True
+                          break
+                  if not found:
+                      CheckResult.wrong(
+                          f"Test was carried out for the sync sub-command, seems that sending emails is not correctly "
+                          f"implemented. expected message: {e_msg}")
+      
+              # testing if the posts table in the database was updated with correct values
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+              # Expected links from the example output
+              expected_links = blog_files[NESTED_AND_FLAT_LINKS_TEST][:-1]
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in output:
+                      return CheckResult.wrong(
+                          f"Test was carried out for blog site with multiple blog posts flat and nested. {link} not found in "
+                          f"the program output")
+      
+              # testing if the last_link column in the blogs table was updated
+              program = TestedProgram()
+              output = program.start("--list")
+              output.strip()
+              for link in expected_links:
+                  if f'{blog} {link}' in output:
+                      return CheckResult.correct()
+      
+              return CheckResult.wrong(
+                  f"Test was carried out for blog site with multiple flat and nested blog posts seems like the last_link "
+                  f"column in the blogs table is not updated after crawling")
+      
+      
+      if __name__ == '__main__':
+          TestBlogNotifierCLI().run_tests()
+    learner_created: false
+  - name: tests.py
+    visible: false
+    text: |
+      import multiprocessing
+      
+      from test.blognotifier_test_utils import *
+      from test.tests import TestBlogNotifierCLI
+      
+      
+      if __name__ == '__main__':
+          http_server_process: multiprocessing.Process = None
+          smtp_server_process: multiprocessing.Process = None
+          mail_queue: Queue = Queue()  # aiosmtpd server will put mails it receives from the program in this queue
+          stop_server_signal_queue: Queue = Queue()  # is used to send signal when to stop aiosmtpd server
+          try:
+              # creating fake blog(just html files) for testing
+              create_blog_site_with_no_posts()
+              create_blog_site_with_nested_posts(1, NESTED_LINKS_TEST_1)
+              create_blog_site_with_nested_posts(2, NESTED_LINKS_TEST_2)
+              create_blog_site_with_nested_posts(3, NESTED_LINKS_TEST_3)
+              create_flat_blog_site_with_multiple_posts()
+              create_blog_site_with_nested_and_flat_posts()
+      
+              # starting python's http.server
+              http_server_process = multiprocessing.Process(target=run_http_server, args=(8000,))
+              http_server_process.start()
+      
+              # starting aiosmtpd.server
+              smtp_server_process = multiprocessing.Process(target=start_smtp_server, args=(mail_queue, stop_server_signal_queue))
+              smtp_server_process.start()
+              # getting aiosmtpd server's address
+              controller_info = {}
+              controller_info['hostname'] = mail_queue.get()
+              controller_info['port'] = mail_queue.get()
+              print(f'successfully received config of smtp server {controller_info}')
+              # config_map['server']['host'] = mail_queue.get()
+              # config_map['server']['port'] = mail_queue.get()
+      
+              # running tests
+              TestBlogNotifierCLI(mail_queue, stop_server_signal_queue).run_tests()
+          finally:
+              # time.sleep(60)
+              print('stopping the http server')
+              # stopping python's http.server
+              # http_server_process.kill()
+              if http_server_process:
+                  http_server_process.terminate()
+                  http_server_process.join()
+              print('successfully stopped http server')
+      
+              # removing all the html files created
+              print('removing the html files generated for testcases')
+              remove_fake_blog()
+              print('successfully removed the html files generated for test cases')
+      
+              # stopping SMTP server
+              print('stopping the smtp server')
+              stop_server_signal_queue.put(None)
+              mail_queue.close()
+              stop_server_signal_queue.close()
+              smtp_server_process.kill()
+              print('successfully stopped smtp server')
+    learner_created: false
+feedback_link: https://hyperskill.org/learn/step/43941#comment
+check_profile: hyperskill_go
+status: Unchecked
+record: -1

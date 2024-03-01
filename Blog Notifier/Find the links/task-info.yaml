@@ -1,0 +1,431 @@
+type: remote_edu
+files:
+  - name: main.go
+    visible: true
+    text: "package main\n\nimport \"fmt\"\n\nfunc main() {\n\t// Write your code solution\
+    \ for the project below.\n\tfmt.Println(\"Hello, World!\")\n}\n"
+    learner_created: false
+  - name: test/__init__.py
+    visible: false
+    learner_created: false
+  - name: test/blog_notifier_test_utils.py
+    visible: false
+    text: "import random, os, socketserver, http.server, shutil\nfrom string import\
+    \ Template\n\nNO_LINKS_TEST = 'no_links'\nFLAT_MULTIPLE_LINKS_TEST = 'flat_multiple_links'\n\
+    NESTED_LINKS_TEST = 'nested_links'\nNESTED_AND_FLAT_LINKS_TEST = 'nested_and_flat_links'\n\
+    CYCLIC_LINKS_TEST = 'cyclic_reference'\n\nFAKE_BLOG = \"fake-blog\"\nblog_addr\
+    \ = f\"http://localhost:8000/{FAKE_BLOG}/\"\npage_template = \"\"\"<!DOCTYPE html>\n\
+    <html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\"\
+    \ content=\"width=device-width, initial-scale=1.0\">\n    <title>Random Blog Post</title>\n\
+    \    <style>\n        body {\n            font-family: Arial, sans-serif;\n  \
+    \          line-height: 1.6;\n            max-width: 800px;\n            margin:\
+    \ 0 auto;\n            padding: 20px;\n        }\n        .post {\n          \
+    \  margin-bottom: 20px;\n            border: 1px solid #ccc;\n            padding:\
+    \ 15px;\n            border-radius: 8px;\n            background-color: #fff;\n\
+    \        }\n\n        h1 {\n            color: #333;\n        }\n\n        p {\n\
+    \            color: #666;\n            word-break: break-all;\n            white-space:\
+    \ normal;\n        }\n\n        a {\n            color: #007BFF;\n           \
+    \ text-decoration: none;\n            font-weight: bold;\n        }\n\n      \
+    \  a:hover {\n            text-decoration: underline;\n        }\n    </style>\n\
+    </head>\n<body>\n    $body        \n</body>\n</html>\"\"\"\n\nlink_template =\
+    \ \"\"\"<div class=\"post\">\n    <p><a href=\"$postaddr\">$name</a></p>\n</div>\"\
+    \"\"\n\npost_template = \"\"\"<div class=\"post\">\n        <p>$body</p>\n   \
+    \ </div>\"\"\"\n\nhtml_files = []\nblog_files = {}\n\ndef remove_fake_blog():\n\
+    \    folder_path = os.path.join(os.getcwd(), FAKE_BLOG)\n    shutil.rmtree(folder_path)\n\
+    \ndef create_html_file(file_name, content):\n    folder_path = os.path.join(os.getcwd(),\
+    \ FAKE_BLOG)\n    if not os.path.exists(folder_path):\n        os.makedirs(folder_path)\n\
+    \    file_path = os.path.join(folder_path, file_name)\n    with open(file_path,\
+    \ 'w') as file:\n        file.write(content)\n\n\n# def remove_html_files():\n\
+    #     for file_name in html_files:\n#         if os.path.exists(file_name):\n\
+    #             os.remove(file_name)\n\n\ndef generate_random_text(k: int) -> str:\n\
+    \    return \"\".join(random.choices(\"abcdefghijklmnopqrstuvwxyz123456789\",\
+    \ k=k))\n\n\n# only one html file containing no links will be created\ndef create_blog_site_with_no_posts():\n\
+    \    name = generate_random_text(4)\n    body = f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'\n\
+    \    t = Template(page_template)\n    blog_page = t.substitute({'body': body})\n\
+    \    create_html_file(f'{name}.html', blog_page)\n    html_files.append(f'{name}.html')\n\
+    \    blog_files[NO_LINKS_TEST] = f'{blog_addr}{name}.html'\n\n\n# this will create\
+    \ a website with the following pattern, index.html will contain links to multiple\
+    \ blog posts.\n# these blog posts will not contain any links thus, the site created\
+    \ has a flat structure\ndef create_flat_blog_site_with_multiple_posts():\n   \
+    \ n = random.randint(3, 5)\n    l = \"\"\n    blog_files['flat_multiple_links']\
+    \ = []\n    for i in range(n):\n        name = generate_random_text(k=4)\n   \
+    \     postaddr = f\"{blog_addr}{name}.html\"\n        t = Template(link_template)\n\
+    \        l += t.substitute({'postaddr': postaddr, 'name': name})\n        create_html_file(f'{name}.html',\n\
+    \                         Template(page_template).substitute(\n              \
+    \               {'body': f'<div class = \"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name}.html')\n        blog_files[FLAT_MULTIPLE_LINKS_TEST].append(f'{blog_addr}{name}.html')\n\
+    \n    t = Template(page_template)\n    blog_page = t.substitute({'body': l})\n\
+    \    create_html_file(\"index.html\", blog_page)\n    html_files.append(\"index.html\"\
+    )\n    blog_files[FLAT_MULTIPLE_LINKS_TEST].append(blog_addr)\n\n\ndef _create_blog_site_with_nested_posts(depth:\
+    \ int, test_name):\n    if depth == 1:\n        name0 = generate_random_text(k=4)\n\
+    \        create_html_file(f'{name0}.html',\n                         Template(page_template).substitute(\n\
+    \                             {'body': f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name0}.html')\n        blog_files[test_name].append(f'{blog_addr}{name0}.html')\n\
+    \        t = Template(link_template)\n        l = t.substitute({'postaddr': f'{blog_addr}{name0}.html',\
+    \ 'name': name0})\n        name1 = generate_random_text(k=4)\n        create_html_file(f'{name1}.html',\
+    \ Template(page_template).substitute({'body': l}))\n        html_files.append(f'{name1}.html')\n\
+    \        blog_files[test_name].append(f'{blog_addr}{name1}.html')\n        return\
+    \ name1\n    name0 = _create_blog_site_with_nested_posts(depth - 1, test_name)\n\
+    \    t = Template(link_template)\n    l = t.substitute({'postaddr': f'{blog_addr}{name0}.html',\
+    \ 'name': name0})\n    name1 = generate_random_text(k=4)\n    create_html_file(f'{name1}.html',\
+    \ Template(page_template).substitute({'body': l}))\n    html_files.append(f'{name1}.html')\n\
+    \    blog_files[test_name].append(f'{blog_addr}{name1}.html')\n    return name1\n\
+    \n\n# this will create website with the following pattern: a.html contains link\
+    \ to b.html, b.html contains link to\n# c.html, c.html contain link to d.html.\
+    \ depending on the parameter depth, this is created for the test to ensure\n#\
+    \ that the blog crawler does not go into endless recursion.\ndef create_blog_site_with_nested_posts(depth:\
+    \ int, test_name=NESTED_LINKS_TEST):\n    blog_files[test_name] = []\n    parent_name\
+    \ = _create_blog_site_with_nested_posts(depth, test_name)\n    return parent_name\n\
+    \n\n# a blog with the following pattern will be created: a blog site with links\
+    \ to multiple blog posts, Some of these\n# blog posts can have nested links. some\
+    \ blog posts have nested and others have flat pattern\ndef create_blog_site_with_nested_and_flat_posts():\n\
+    \n    def visualize_nested_blogs(blog_posts_list: list, viz_file_name:str):\n\
+    \        l = \"\"\n        n = 0\n        for el in blog_posts_list:\n       \
+    \     l += f'{\" \"*n}{el}\\n'\n            n += 1\n        with open(viz_file_name,\
+    \ 'w') as f:\n            f.write(l)\n\n    blog_files[NESTED_AND_FLAT_LINKS_TEST]\
+    \ = []\n    # creating blog posts with no links in them\n    n = random.randint(3,\
+    \ 5)\n    l = \"\"\n    for i in range(n):\n        name = generate_random_text(k=4)\n\
+    \        postaddr = f\"{blog_addr}{name}.html\"\n        t = Template(link_template)\n\
+    \        l += t.substitute({'postaddr': postaddr, 'name': name})\n        create_html_file(f'{name}.html',\n\
+    \                         Template(page_template).substitute(\n              \
+    \               {'body': f'<div class = \"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name}.html')\n        blog_files[NESTED_AND_FLAT_LINKS_TEST].append(postaddr)\n\
+    \n    # creating blog posts with nested links of depth 2\n    nested_post_2 =\
+    \ create_blog_site_with_nested_posts(depth=2, test_name='nested_links_2')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_2}.html\"\
+    , 'name': nested_post_2})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_2'][-1::-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_2'][-1::-1], 'nested_links_2.txt')\n\
+    \n    # creating blog posts with nested links of depth 3\n    nested_post_3 =\
+    \ create_blog_site_with_nested_posts(depth=3, test_name='nested_links_3')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_3}.html\"\
+    , 'name': nested_post_3})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_3'][-1:-4:-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_3'][-1::-1], 'nested_links_3.txt')\n\
+    \n    # creating blog posts with nested links of depth 4\n    nested_post_4 =\
+    \ create_blog_site_with_nested_posts(depth=4, test_name='nested_links_4')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_4}.html\"\
+    , 'name': nested_post_4})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_4'][-1:-4:-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_4'][-1::-1], 'nested_links_4.txt')\n\
+    \n    t = Template(page_template)\n    blog_page = t.substitute({'body': l})\n\
+    \    create_html_file(\"index2.html\", blog_page)\n    html_files.append(\"index2.html\"\
+    )\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].append(f'{blog_addr}index2.html')\n\
+    \n\n# this would create a blog site with the following pattern: a.html has link\
+    \ for b.html, b.html has link for a.html\n# and c.html, c.html does not have any\
+    \ hyperlinks\ndef create_blog_with_cyclic_reference():\n    blog_files[CYCLIC_LINKS_TEST]\
+    \ = []\n    # creating c.html, notice it does not contain any hyperlinks\n   \
+    \ c_html = generate_random_text(k=4)\n    create_html_file(f'{c_html}.html',\n\
+    \                     Template(page_template).substitute(\n                  \
+    \       {'body': f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \    html_files.append(f'{c_html}.html')\n    blog_files[CYCLIC_LINKS_TEST].append(f'{blog_addr}{c_html}.html')\n\
+    \n    a_html = generate_random_text(k=4)\n    b_html = generate_random_text(k=4)\n\
+    \n    # body for a.html, notice it contains link for b.html\n    t_a = Template(link_template)\n\
+    \    l_a = t_a.substitute({'postaddr': f'{blog_addr}{b_html}.html', 'name': b_html})\n\
+    \n    # body for b.html, notice it contains link for a.html and c.html\n    t_b\
+    \ = Template(link_template)\n    l_b = t_b.substitute({'postaddr': f'{blog_addr}{c_html}.html',\
+    \ 'name': c_html})\n    l_b += t_b.substitute({'postaddr': f'{blog_addr}{a_html}.html',\
+    \ 'name': a_html})\n\n    # creating b.html\n    create_html_file(f'{b_html}.html',\n\
+    \                     Template(page_template).substitute(\n                  \
+    \       {'body': l_b}))\n    html_files.append(f'{b_html}.html')\n    blog_files[CYCLIC_LINKS_TEST].append(f'{blog_addr}{b_html}.html')\n\
+    \n    # creating a.html\n    create_html_file(f'{a_html}.html',\n            \
+    \         Template(page_template).substitute(\n                         {'body':\
+    \ l_a}))\n    html_files.append(f'{a_html}.html')\n    blog_files[CYCLIC_LINKS_TEST].append(f'{blog_addr}{a_html}.html')\n\
+    \n\ndef run_http_server(port):\n    # Create an HTTP server with the specified\
+    \ port and handler\n    handler = http.server.SimpleHTTPRequestHandler\n    with\
+    \ socketserver.TCPServer((\"\", port), handler) as httpd:\n        print(f\"Serving\
+    \ on port {port}\")\n        httpd.serve_forever()\n"
+    learner_created: false
+  - name: test/tests.py
+    visible: false
+    text: |
+      import multiprocessing
+      from .blog_notifier_test_utils import *
+      
+      from hstest import StageTest, TestedProgram, CheckResult, dynamic_test
+      
+      
+      class TestBlogNotifierCLI(StageTest):
+      
+          @dynamic_test(time_limit=120000)
+          def test1_crawling_with_flat_multiple_pages(self):
+              # Test crawling a site with multiple pages.
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[FLAT_MULTIPLE_LINKS_TEST][-1])
+      
+              # Splitting the output into lines for easier assertion
+              links = output.strip().split('\n')
+      
+              # Expected links from the example output
+              expected_links = blog_files[FLAT_MULTIPLE_LINKS_TEST][:-1]
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+              # # Check if there are no extra links in the output
+              for link in links:
+                  if link.endswith(".html"):
+                      if link not in expected_links:
+                          return CheckResult.wrong(f"There is an extra link {link} in the output.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test2_crawling_with_no_hyperlinks(self):
+              # Test crawling a site with no links.
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[NO_LINKS_TEST])
+      
+              # Splitting the output into lines for easier assertion
+              output = output.strip()
+      
+              # Expected links from the example output
+              expected_output = f"No blog posts found for {blog_files[NO_LINKS_TEST]}"
+      
+              # Check if all expected links are present in the output
+              if expected_output not in output:
+                  return CheckResult.wrong(
+                      f"The output of the program does not match the expected output for the second YAML file."
+                      f"\nYour program output: {output}"
+                      f"\nExpected output: {expected_output}")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test3_crawling_with_duplicate_links_a(self):
+              # Test crawling a site with multiple pages, this is check for duplicate links.
+              program = TestedProgram()
+              output = program.start("--crawl-site", "https://brianpzaide.github.io/blog-notifier")
+      
+              # Splitting the output into lines for easier assertion
+              links = output.strip().split('\n')
+      
+              # Expected links from the example output
+              expected_links = [
+                  "https://brianpzaide.github.io/blog-notifier/a.html",
+                  "https://brianpzaide.github.io/blog-notifier/b.html",
+                  "https://brianpzaide.github.io/blog-notifier/c.html",
+                  "https://brianpzaide.github.io/blog-notifier/d.html",
+                  "https://brianpzaide.github.io/blog-notifier/e.html",
+                  "https://brianpzaide.github.io/blog-notifier/f.html"
+              ]
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+              links = [link for link in links if link.endswith(".html")]
+      
+              if len(links) > len(expected_links):
+                  return CheckResult.wrong("The output contains more links than expected, could be duplicate, please return "
+                                           "unique links.")
+      
+              # Check if there are no extra links in the output
+              for link in links:
+                  if link not in expected_links:
+                      return CheckResult.wrong("The output contains extra links, could be duplicate, please return unique "
+                                               "links.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test4_crawling_with_depth_limit_a(self):
+              # checking code with blogs having depth of 2.
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[NESTED_LINKS_TEST][-4]).strip()
+      
+              # Mocked output for depth 3 limit, assuming known structure
+              expected_links = blog_files[NESTED_LINKS_TEST][-5::-1]
+      
+              # Splitting the output into lines for easier assertion
+              links = output.strip().split('\n')
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+              links = [link for link in links if link.endswith(".html")]
+              if len(links) > len(expected_links):
+                  return CheckResult.wrong(f"The output contains more links than expected, seams like the program crawls "
+                                           f"beyond the depth limit of '3'")
+      
+              # Check if there are no links beyond depth 3
+              # for link in links:
+              #     if link.count('/') > 4:
+              #         return CheckResult.wrong(f"A link {link} was found that exceeds the depth limit of 3.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test5_crawling_with_depth_limit_b(self):
+              # checking code with blogs having depth of 3.
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[NESTED_LINKS_TEST][-3]).strip()
+      
+              # Mocked output for depth 3 limit, assuming known structure
+              expected_links = blog_files[NESTED_LINKS_TEST][-4::-1]
+      
+              # Splitting the output into lines for easier assertion
+              links = output.strip().split('\n')
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+              links = [link for link in links if link.endswith(".html")]
+              if len(links) > len(expected_links):
+                  return CheckResult.wrong(f"The output contains more links than expected, seams like the program crawls "
+                                           f"beyond the depth limit of '3'")
+      
+              # Check if there are no links beyond depth 3
+              # for link in links:
+              #     if link.count('/') > 4:
+              #         return CheckResult.wrong(f"A link {link} was found that exceeds the depth limit of 3.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test6_crawling_with_depth_limit_c(self):
+              # checking code with blogs having depth of more than 3.
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[NESTED_LINKS_TEST][-1]).strip()
+      
+              # Mocked output for depth 3 limit, assuming known structure
+              expected_links = blog_files[NESTED_LINKS_TEST][-2:-5:-1]
+      
+              # Splitting the output into lines for easier assertion
+              links = output.strip().split('\n')
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+              links = [link for link in links if link.endswith(".html")]
+              if len(links) > len(expected_links):
+                  return CheckResult.wrong(f"The output contains more links than expected, seams like the program crawls "
+                                           f"beyond the depth limit of '3'")
+      
+              # Check if there are no links beyond depth 3
+              # for link in links:
+              #     if link.count('/') > 4:
+              #         return CheckResult.wrong(f"A link {link} was found that exceeds the depth limit of 3.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test7_crawling_with_duplicate_links_b(self):
+              # Test checks for cross refrencing posts (posts that have refrences of each other). Checks whether the code
+              # breaks out of infinite recursion by obeying a depth limit of '3'.
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[CYCLIC_LINKS_TEST][-1])
+      
+              # Splitting the output into lines for easier assertion
+              links = output.strip().split('\n')
+      
+              # Expected links from the example output
+              expected_links = blog_files[CYCLIC_LINKS_TEST]
+      
+              links = [link for link in links if link.endswith(".html")]
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+      
+              if len(links) > len(expected_links):
+                  return CheckResult.wrong(f"The output contains duplicate links.")
+      
+              # Check if there are no extra links in the output
+              for link in links:
+                  if link not in expected_links:
+                      return CheckResult.wrong(f"There is an extra link {link} in the output.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test8_crawling_with_nested_and_flat_posts(self):
+              # Test checks for blogs that have flat blog-posts(blog-post that has no hyperlinks) or nested blog-posts(blog-post that have hyperlinks to other blog-posts) .
+              program = TestedProgram()
+              output = program.start("--crawl-site", blog_files[NESTED_AND_FLAT_LINKS_TEST][-1])
+      
+              # Splitting the output into lines for easier assertion
+              # links = output.strip().split('\n')
+              links = output.strip()
+      
+              # Expected links from the example output
+              expected_links = blog_files[NESTED_AND_FLAT_LINKS_TEST][-2::-1]
+      
+              # links = [link for link in links if link.endswith(".html")]
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in links:
+                      return CheckResult.wrong(f"The link {link} was not found in the output.")
+      
+              # Check if there are no extra links in the output
+              for link in links.split('\n'):
+                  if link not in expected_links:
+                      return CheckResult.wrong(f"There is an extra link {link} in the output.")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test9_crawling_with_invalid_url(self):
+              # checks how the code handles the case when given url of a non-existing blog
+              non_existing_blog = f"http://{generate_random_text(4)}.html"
+              # Test crawling with an invalid URL.
+              program = TestedProgram()
+              output = program.start("--crawl-site", non_existing_blog).strip().lower()
+      
+              # Expected error message or indication for an invalid URL
+              expected_output = f"could not reach the site: {non_existing_blog}"
+      
+              # Check if the output contains indication of an error
+              if expected_output not in output:
+                  return CheckResult.wrong("The output does not indicate an error occurred with an invalid URL.")
+              return CheckResult.correct()
+      
+      
+      if __name__ == '__main__':
+          TestBlogNotifierCLI().run_tests()
+    learner_created: false
+  - name: tests.py
+    visible: false
+    text: |
+      import multiprocessing
+      from test.tests import TestBlogNotifierCLI
+      from test.blog_notifier_test_utils import *
+      
+      if __name__ == '__main__':
+          http_server_process: multiprocessing.Process = None
+          try:
+              # creating fake blog(just html files) for testing
+              create_blog_site_with_no_posts()
+              create_flat_blog_site_with_multiple_posts()
+              create_blog_site_with_nested_posts(5)
+              create_blog_site_with_nested_and_flat_posts()
+              create_blog_with_cyclic_reference()
+      
+              # starting python's http.server
+              http_server_process = multiprocessing.Process(target=run_http_server, args=(8000,))
+              http_server_process.start()
+      
+              # running tests
+              TestBlogNotifierCLI('blog_notifier.blog_notifier').run_tests()
+          finally:
+              # stopping python's http.server
+              if http_server_process:
+                  http_server_process.terminate()
+                  http_server_process.join()
+      
+              # removing all the html files created
+              remove_fake_blog()
+    learner_created: false
+feedback_link: https://hyperskill.org/learn/step/43939#comment
+check_profile: hyperskill_go
+status: Unchecked
+record: -1

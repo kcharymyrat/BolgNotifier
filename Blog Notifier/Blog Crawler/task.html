@@ -1,0 +1,115 @@
+<div class="step-text">
+<h5 id="description">Description</h5>
+<p>In Stage Four, implement new CLI sub-commands:</p>
+<ul>
+<li>To crawl existing blog sites listed in the database's <code class="java">blogs</code> table. Discover new blog posts and insert their entries into the <code class="java">posts</code> table within the database.</li>
+<li>To list all the blog-posts that are in the database given a blog-site as input.</li>
+</ul>
+<h5 id="objectives">Objectives</h5>
+<p>In this stage, you need to implement <code class="java">--crawl</code> sub-command for this CLI. This sub-command should do the following:</p>
+<ul>
+<li>Fetch all the blog sites from the blogs table</li>
+<li>Crawl each of the blog site in the watch list, to discover if new blog posts have been added to that blog site.</li>
+<li>Insert an entry into the posts table for every new blog post discovered.</li>
+<li>If new blog posts are discovered for a blog site, update the last_visited column in the blogs table for that blog site with last blog post that was just discovered.</li>
+</ul>
+<p>In this stage, implement the <code class="java">--crawl</code> sub-command for the CLI, executing the following tasks:</p>
+<ul>
+<li>Retrieve all blog sites listed in the 'blogs' table.</li>
+<li>Perform a crawl on each site in the watch list to identify new blog posts.</li>
+<li>Create an entry in the <code class="java">posts</code> table for each newly discovered post.</li>
+<li>If new blog posts are detected for a blog site, update the <code class="java">last_link</code> column in the <code class="java">blogs</code> table corresponding to that specific blog site with the URL of the recently discovered blog post.</li>
+</ul>
+<p>Additionally, implement sub-command <code class="java">blognotifier listPosts --site</code>, that would take a URL of a blog-site and output all the blog-posts corresponding to that blog-site to <code class="java">stdout</code>.</p>
+<p>Please reuse the code you created from the previous stages.</p>
+<h5 id="examples">Examples</h5>
+<p>In this stage your program will be tested for the sub-command, <code class="java">--crawl</code>.</p>
+<p>Suppose you have the following entries in the <code class="java">blogs</code> table in the database</p>
+<table border="1" cellpadding="1" cellspacing="1" style="width: 500px;">
+<thead>
+<tr>
+<th>site</th>
+<th>last_link</th>
+</tr>
+<tr>
+<td>blog1</td>
+<td>post1</td>
+</tr>
+<tr>
+<td>blog2</td>
+<td>post1</td>
+</tr>
+</thead>
+</table>
+<p>Suppose that the new blog posts have been added to <code class="java">blog1</code> and <code class="java">blog2</code></p>
+<p><code class="java">blog1</code> has the following new blog posts:</p>
+<ul>
+<li>post_1</li>
+<li>post_2</li>
+</ul>
+<p><code class="java">blog2</code> has the following new blog posts:</p>
+<ul>
+<li>post_a</li>
+<li>post_b</li>
+<li>post_c</li>
+</ul>
+<p> when the command <code class="java">blognotifier --crawl</code> is run, your program must discover the new blog posts for blogs <code class="java">blog1</code>, and <code class="java">blog2</code>, and update the <code class="java">posts</code> table. After the update the <code class="java">posts</code> table must have the following entries</p>
+<table border="1" cellpadding="1" cellspacing="1" style="width: 500px;">
+<thead>
+<tr>
+<th>site</th>
+<th>link</th>
+</tr>
+<tr>
+<td>blog1</td>
+<td>post_1</td>
+</tr>
+<tr>
+<td>blog1</td>
+<td>post_2</td>
+</tr>
+<tr>
+<td>blog2</td>
+<td>post_a</td>
+</tr>
+<tr>
+<td>blog2</td>
+<td>post_b</td>
+</tr>
+<tr>
+<td>blog2</td>
+<td>post_c</td>
+</tr>
+</thead>
+</table>
+<p>And the <code class="java">blogs</code> table must look like the following:</p>
+<table border="1" cellpadding="1" cellspacing="1" style="width: 500px;">
+<thead>
+<tr>
+<th>site</th>
+<th>last_link</th>
+</tr>
+<tr>
+<td>blog1</td>
+<td>post_2</td>
+</tr>
+<tr>
+<td>blog2</td>
+<td>post_c</td>
+</tr>
+</thead>
+</table>
+<p>Additionally your program will be tested for the sub-command, listPosts --site</p>
+<p>when the <code class="java">blognotifier listPosts --site blog2</code> command is run your program should list all the blog-posts corresponding to the given input which is <code class="java">blog2</code> in this case. The following output is expected</p>
+<pre><code class="java">post_a
+post_b
+post_c</code></pre>
+<p>Please reuse the code from the previous stages. All the sub-commands from the previous stages will also be tested. Specifically we will test the following sub-commands</p>
+<ul>
+<li><code class="java">--migrate</code></li>
+<li><code class="java">--explore</code></li>
+<li><code class="java">--list</code></li>
+<li><code class="java">--crawl</code></li>
+<li><code class="java">listPosts --site</code></li>
+</ul>
+</div>

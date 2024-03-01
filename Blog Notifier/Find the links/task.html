@@ -1,0 +1,62 @@
+<div class="step-text">
+<h5 id="description">Description</h5>
+<p>A web crawler is an invaluable  tool for users who want to keep an eye on new content, references, or resources that emerge on a blog. In this stage, you will build a CLI sub-command and also create a program that can crawl a website recursively to a specified depth, collecting links and presenting them in a user-friendly manner.</p>
+<h5 id="objectives">Objectives</h5>
+<p>Your task is to implement the <code class="language-go">--crawl-site</code> sub-command for the Blog Notifier CLI; this command should accept a website URL as input, and the program needs to crawl this website and find all the hyperlinks on the site recursively up to a maximum depth of 3. The program should output a list of unique hyperlinks found, excluding any duplicates that may have been encountered.</p>
+<p>In Go, you can fetch and parse HTML files using the <code class="language-go">net/http</code> and <code class="language-go">goquery</code> packages; the process typically involves fetching the website using it's URL and then using <code class="language-go">goquery</code> to find all the hyperlinks. Here's a simplified example to illustrate this process.</p>
+<p>First, you can fetch the website using it's URL, <a href="https://pkg.go.dev/net/http" rel="noopener noreferrer nofollow" target="_blank">using the <code class="language-go">http.Get</code> function from the <code class="language-go">net/http</code> package</a>:</p>
+<pre><code class="language-go">
+// Make an HTTP GET request to the specified website
+res, err := http.Get(site)
+
+if err != nil {
+	return nil, fmt.Errorf("could not reach the site: %s", site)
+}
+
+defer res.Body.Close()
+
+// Check if the HTTP response status code is not 200 (OK)
+if res.StatusCode != 200 {
+	return nil, err
+}</code></pre>
+<p>Next, to find all the hyperlinks inside a given HTML, you'll use the <a href="https://pkg.go.dev/github.com/PuerkitoBio/goquery" rel="noopener noreferrer nofollow" target="_blank">goquery package</a>:</p>
+<pre><code class="language-go">// Load the HTML document
+doc, err := goquery.NewDocumentFromReader(res.Body)
+if err != nil {
+	return nil, err
+}
+
+// Initialize an empty slice to store discovered links
+links := make([]string, 0)
+
+// Iterate over all 'a' (anchor) elements in the HTML document
+doc.Find("a").Each(func(i int, s *goquery.Selection) {
+
+	// Extract the 'href' attribute value from each 'a' element
+	link, exists := s.Attr("href")
+
+	if exists {
+		// Add the discovered link to the slice
+		links = append(links, link)
+	}
+})
+</code></pre>
+<p>Integrating this process into your CLI tool will enable it to effectively crawl any given website.</p>
+<h5 id="examples">Examples</h5>
+<p><strong>Example 1: Crawling a blog site with multiple pages.</strong></p>
+<p><em>Possible Expected Output:</em></p>
+<pre><code class="language-go">$ go run main.go --crawl-site "https://brianpzaide.github.io/blog-notifier"
+https://brianpzaide.github.io/blog-notifier/a.html
+https://brianpzaide.github.io/blog-notifier/b.html
+https://brianpzaide.github.io/blog-notifier/c.html
+https://brianpzaide.github.io/blog-notifier/d.html
+https://brianpzaide.github.io/blog-notifier/e.html
+https://brianpzaide.github.io/blog-notifier/f.html
+</code></pre>
+<p><strong>Example 1: Crawling a blog site with no hyperlinks.</strong></p>
+<p><em>Possible Expected Output:</em></p>
+<pre><code class="language-go">$ go run main.go --crawl-site "http://noblogpostsyet.com"
+No blog posts found for http://noblogpostsyet.com
+</code></pre>
+<p>We will be evaluating your code on a simple website for testing purposes. You can find a sample of the website <a href="https://brianpzaide.github.io/blog-notifier" rel="noopener noreferrer nofollow" target="_blank">here</a>. At this stage of the project, the primary objective is to practice writing Golang code effectively.</p>
+</div>

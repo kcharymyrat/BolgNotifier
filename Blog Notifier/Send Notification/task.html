@@ -1,0 +1,36 @@
+<div class="step-text">
+<h5 id="description">Description</h5>
+<p>In Stage Five, implement a new CLI sub-command:</p>
+<ul>
+<li>To crawl existing blog sites listed in the database's <code class="java">blogs</code> table. Discover new blog posts and insert their entries into the <code class="java">posts</code> table within the database. Additionally send email notification about the new blog-posts discovered to the user.</li>
+</ul>
+<h5 id="objectives">Objectives</h5>
+<p>In this stage, you need to implement <code class="java">sync --conf</code> sub-command for this CLI. This sub-command should do the following:</p>
+<ul>
+<li>Take the config filename as input, parse the YAML file(which you implemented in stage 1)</li>
+<li>Fetch all the blog sites from the blogs table</li>
+<li>Crawl each of the blog site in the watch list, to discover if new blog posts have been added to that blog site.</li>
+<li>Insert an entry into the posts table for every new blog post discovered.</li>
+<li>If new blog-posts are discovered for a blog site, update the last_visited column in the blogs table for that blog site with last blog post that was just discovered.</li>
+<li>Additionally send an email notification to the user for each new blog-post that is discovered.</li>
+</ul>
+<h5 id="examples">Examples</h5>
+<p>In this stage your program will be tested for the sub-command, <code class="java">sync --conf "credentials.yaml"</code>.</p>
+<p>When the command <code class="java">blognotifier sync --conf "credentials.yaml"</code> is run, your program must do the following:</p>
+<ul>
+<li>Parse the the file <code class="java">credentials.yaml</code>, and store the values in some variables to be used later for sending email notification.</li>
+<li>Crawl each of the blog site in the watch list, to discover if new blog posts have been added to that blog site.</li>
+<li>Insert an entry into the posts table for every new blog post discovered.</li>
+<li>If new blog-posts are discovered for a blog site, update the last_visited column in the blogs table for that blog site with last blog post that was just discovered.</li>
+<li>Additionally send an email notification to the user for each new blog-post that is discovered.</li>
+</ul>
+<p>Please reuse the code from the previous stages. All the sub-commands from the previous stages will also be tested. Specifically we will test the following sub-commands</p>
+<ul>
+<li><code class="java">--migrate</code></li>
+<li><code class="java">--explore</code></li>
+<li><code class="java">--list</code></li>
+<li><code class="java">--crawl</code></li>
+<li><code class="java">listPosts --site</code></li>
+<li><code class="java">sync --conf</code></li>
+</ul>
+</div>

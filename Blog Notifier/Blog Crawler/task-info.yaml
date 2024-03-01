@@ -1,0 +1,409 @@
+type: remote_edu
+files:
+  - name: main.go
+    visible: true
+    text: "package main\n\nimport \"fmt\"\n\nfunc main() {\n\t// Write your code solution\
+    \ for the project below.\n\tfmt.Println(\"Hello, World!\")\n}\n"
+    learner_created: false
+  - name: test/__init__.py
+    visible: false
+    learner_created: false
+  - name: test/blognotifier_test_utils.py
+    visible: false
+    text: "import random, os, socketserver, http.server, shutil, sqlite3\nfrom string\
+    \ import Template\n\nDB_FILE = 'blogs.sqlite3'\nNO_LINKS_TEST = 'no_links'\nFLAT_MULTIPLE_LINKS_TEST\
+    \ = 'flat_multiple_links'\nNESTED_LINKS_TEST_1 = 'nested_links_1'\nNESTED_LINKS_TEST_2\
+    \ = 'nested_links_2'\nNESTED_AND_FLAT_LINKS_TEST = 'nested_and_flat_links'\n\n\
+    FAKE_BLOG = \"fake-blog\"\nblog_addr = f\"http://localhost:8000/{FAKE_BLOG}/\"\
+    \n\ntables_properties = {\n    'blogs': {\n        'site': 'TEXT',\n        'last_link':\
+    \ 'TEXT'\n    },\n    'posts': {\n        'link': 'TEXT',\n        'site': 'TEXT'\n\
+    \    },\n    'mails': {\n        'id': 'INTEGER',\n        'mail': 'TEXT',\n \
+    \       'is_sent': 'INTEGER'\n    }\n}\n\npage_template = \"\"\"<!DOCTYPE html>\n\
+    <html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\"\
+    \ content=\"width=device-width, initial-scale=1.0\">\n    <title>Random Blog Post</title>\n\
+    \    <style>\n        body {\n            font-family: Arial, sans-serif;\n  \
+    \          line-height: 1.6;\n            max-width: 800px;\n            margin:\
+    \ 0 auto;\n            padding: 20px;\n        }\n        .post {\n          \
+    \  margin-bottom: 20px;\n            border: 1px solid #ccc;\n            padding:\
+    \ 15px;\n            border-radius: 8px;\n            background-color: #fff;\n\
+    \        }\n\n        h1 {\n            color: #333;\n        }\n\n        p {\n\
+    \            color: #666;\n            word-break: break-all;\n            white-space:\
+    \ normal;\n        }\n\n        a {\n            color: #007BFF;\n           \
+    \ text-decoration: none;\n            font-weight: bold;\n        }\n\n      \
+    \  a:hover {\n            text-decoration: underline;\n        }\n    </style>\n\
+    </head>\n<body>\n    $body        \n</body>\n</html>\"\"\"\n\nlink_template =\
+    \ \"\"\"<div class=\"post\">\n    <p><a href=\"$postaddr\">$name</a></p>\n</div>\"\
+    \"\"\n\npost_template = \"\"\"<div class=\"post\">\n        <p>$body</p>\n   \
+    \ </div>\"\"\"\n\nhtml_files = []\nblog_files = {}\n\n\ndef check_table_exists(table_name:\
+    \ str) -> bool:\n    connection = sqlite3.connect(DB_FILE)  # Replace 'your_database.db'\
+    \ with your database file\n    # Create a cursor object\n    cursor = connection.cursor()\n\
+    \    cursor.execute(f\"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'\"\
+    )\n    # Fetch the result\n    result = cursor.fetchone()\n    cursor.close()\n\
+    \    connection.close()\n    return result is not None\n\n\ndef check_table_properties(table_name)\
+    \ -> tuple:\n    # Connect to the SQLite database\n    connection = sqlite3.connect(DB_FILE)\
+    \  # Replace 'your_database.db' with your database file\n    # Create a cursor\
+    \ object\n    cursor = connection.cursor()\n    cursor.execute(f\"PRAGMA table_info({table_name})\"\
+    )\n    # Fetch all the rows from the result\n    columns_info = cursor.fetchall()\n\
+    \    columns_info = {column[1]: column[2] for column in columns_info}\n    cursor.close()\n\
+    \    connection.close()\n    return (tables_properties[table_name] == columns_info,\
+    \ columns_info)\n\n\ndef remove_db_file():\n    print(os.curdir)\n    if os.path.exists(DB_FILE):\n\
+    \        os.remove(DB_FILE)\n\n\ndef remove_fake_blog():\n    folder_path = os.path.join(os.getcwd(),\
+    \ FAKE_BLOG)\n    shutil.rmtree(folder_path)\n\n\ndef create_html_file(file_name,\
+    \ content):\n    folder_path = os.path.join(os.getcwd(), FAKE_BLOG)\n    if not\
+    \ os.path.exists(folder_path):\n        os.makedirs(folder_path)\n    file_path\
+    \ = os.path.join(folder_path, file_name)\n    with open(file_path, 'w') as file:\n\
+    \        file.write(content)\n\n\ndef generate_random_text(k: int) -> str:\n \
+    \   return \"\".join(random.choices(\"abcdefghijklmnopqrstuvwxyz123456789\", k=k))\n\
+    \n\n# only one html file containing no links will be created\ndef create_blog_site_with_no_posts():\n\
+    \    name = generate_random_text(4)\n    body = f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'\n\
+    \    t = Template(page_template)\n    blog_page = t.substitute({'body': body})\n\
+    \    create_html_file(f'{name}.html', blog_page)\n    html_files.append(f'{name}.html')\n\
+    \    blog_files[NO_LINKS_TEST] = f'{blog_addr}{name}.html'\n\n\n# this will create\
+    \ a website with the following pattern, index.html will contain links to multiple\
+    \ blog posts.\n# these blog posts will not contain any links thus, the site created\
+    \ has a flat structure\ndef create_flat_blog_site_with_multiple_posts():\n   \
+    \ n = random.randint(3, 5)\n    l = \"\"\n    blog_files['flat_multiple_links']\
+    \ = []\n    for i in range(n):\n        name = generate_random_text(k=4)\n   \
+    \     postaddr = f\"{blog_addr}{name}.html\"\n        t = Template(link_template)\n\
+    \        l += t.substitute({'postaddr': postaddr, 'name': name})\n        create_html_file(f'{name}.html',\n\
+    \                         Template(page_template).substitute(\n              \
+    \               {'body': f'<div class = \"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name}.html')\n        blog_files[FLAT_MULTIPLE_LINKS_TEST].append(f'{blog_addr}{name}.html')\n\
+    \n    t = Template(page_template)\n    blog_page = t.substitute({'body': l})\n\
+    \    create_html_file(\"index.html\", blog_page)\n    html_files.append(\"index.html\"\
+    )\n    blog_files[FLAT_MULTIPLE_LINKS_TEST].append(blog_addr)\n\n\ndef _create_blog_site_with_nested_posts(depth:\
+    \ int, test_name):\n    if depth == 1:\n        name0 = generate_random_text(k=4)\n\
+    \        create_html_file(f'{name0}.html',\n                         Template(page_template).substitute(\n\
+    \                             {'body': f'<div class=\"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name0}.html')\n        blog_files[test_name].append(f'{blog_addr}{name0}.html')\n\
+    \        t = Template(link_template)\n        l = t.substitute({'postaddr': f'{blog_addr}{name0}.html',\
+    \ 'name': name0})\n        name1 = generate_random_text(k=4)\n        create_html_file(f'{name1}.html',\
+    \ Template(page_template).substitute({'body': l}))\n        html_files.append(f'{name1}.html')\n\
+    \        blog_files[test_name].append(f'{blog_addr}{name1}.html')\n        return\
+    \ name1\n    name0 = _create_blog_site_with_nested_posts(depth - 1, test_name)\n\
+    \    t = Template(link_template)\n    l = t.substitute({'postaddr': f'{blog_addr}{name0}.html',\
+    \ 'name': name0})\n    name1 = generate_random_text(k=4)\n    create_html_file(f'{name1}.html',\
+    \ Template(page_template).substitute({'body': l}))\n    html_files.append(f'{name1}.html')\n\
+    \    blog_files[test_name].append(f'{blog_addr}{name1}.html')\n    return name1\n\
+    \n\n# this will create website with the following pattern: a.html contains link\
+    \ to b.html, b.html contains link to\n# c.html, c.html contain link to d.html.\
+    \ depending on the parameter depth, this is created for the test to ensure\n#\
+    \ that the blog crawler does not go into endless recursion.\ndef create_blog_site_with_nested_posts(depth:\
+    \ int, test_name: str):\n    blog_files[test_name] = []\n    parent_name = _create_blog_site_with_nested_posts(depth,\
+    \ test_name)\n    return parent_name\n\n\n# a blog with the following pattern\
+    \ will be created: a blog site with links to multiple blog posts, Some of these\n\
+    # blog posts can have nested links. some blog posts have nested and others have\
+    \ flat pattern\ndef create_blog_site_with_nested_and_flat_posts():\n    def visualize_nested_blogs(blog_posts_list:\
+    \ list, viz_file_name: str):\n        l = \"\"\n        n = 0\n        for el\
+    \ in blog_posts_list:\n            l += f'{\" \" * n}{el}\\n'\n            n +=\
+    \ 1\n        with open(viz_file_name, 'w') as f:\n            f.write(l)\n\n \
+    \   blog_files[NESTED_AND_FLAT_LINKS_TEST] = []\n    # creating blog posts with\
+    \ no links in them\n    n = random.randint(3, 5)\n    l = \"\"\n    for i in range(n):\n\
+    \        name = generate_random_text(k=4)\n        postaddr = f\"{blog_addr}{name}.html\"\
+    \n        t = Template(link_template)\n        l += t.substitute({'postaddr':\
+    \ postaddr, 'name': name})\n        create_html_file(f'{name}.html',\n       \
+    \                  Template(page_template).substitute(\n                     \
+    \        {'body': f'<div class = \"post\"><p>{generate_random_text(250)}</p></div>'}))\n\
+    \        html_files.append(f'{name}.html')\n        blog_files[NESTED_AND_FLAT_LINKS_TEST].append(postaddr)\n\
+    \n    # creating blog posts with nested links of depth 2\n    nested_post_1 =\
+    \ create_blog_site_with_nested_posts(depth=1, test_name='nested_links_1')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_1}.html\"\
+    , 'name': nested_post_1})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_1'][-1::-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_2'][-1::-1], 'nested_links_2.txt')\n\
+    \n    # creating blog posts with nested links of depth 3\n    nested_post_2 =\
+    \ create_blog_site_with_nested_posts(depth=2, test_name='nested_links_2')\n  \
+    \  t = Template(link_template)\n    l += t.substitute({'postaddr': f\"{blog_addr}{nested_post_2}.html\"\
+    , 'name': nested_post_2})\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_2'][-1::-1])\n\
+    \    # visualize_nested_blogs(blog_files['nested_links_3'][-1::-1], 'nested_links_3.txt')\n\
+    \n    t = Template(page_template)\n    blog_page = t.substitute({'body': l})\n\
+    \    create_html_file(\"index2.html\", blog_page)\n    html_files.append(\"index2.html\"\
+    )\n    blog_files[NESTED_AND_FLAT_LINKS_TEST].append(f'{blog_addr}index2.html')\n\
+    \n\ndef run_http_server(port):\n    # Create an HTTP server with the specified\
+    \ port and handler\n    handler = http.server.SimpleHTTPRequestHandler\n    with\
+    \ socketserver.TCPServer((\"\", port), handler) as httpd:\n        print(f\"Serving\
+    \ on port {port}\")\n        httpd.serve_forever()\n"
+    learner_created: false
+  - name: test/tests.py
+    visible: false
+    text: |
+      import multiprocessing
+      from .blognotifier_test_utils import *
+      
+      from hstest import StageTest, TestedProgram, CheckResult, dynamic_test
+      
+      
+      class TestBlogNotifierCLI(StageTest):
+      
+          @dynamic_test(time_limit=120000)
+          def test1_migrate_command(self):
+              # Test the --migrate sub-command which creates the blogs.sqlite3 database and tables
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate").strip().lower()
+      
+              for table_name in tables_properties:
+                  if check_table_exists(table_name) is False:
+                      raise CheckResult.wrong(f"The --migrate command did not create the '{table_name}' table.")
+                  temp = check_table_properties(table_name)
+                  if temp[0] is False:
+                      raise CheckResult.wrong(
+                          f"Wrong column types for '{table_name}' table. Expected column types for the '{table_name}' table are {tables_properties[table_name]}. Found {temp[1]}")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test2_explore_command(self):
+              # Test the --list sub-command which lists all blog sites in the watch list
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog_1 = blog_files[FLAT_MULTIPLE_LINKS_TEST][0]
+              program.start('--explore', blog_1)
+              program = TestedProgram()
+              blog_2 = blog_files[FLAT_MULTIPLE_LINKS_TEST][1]
+              program.start('--explore', blog_2)
+              program = TestedProgram()
+              blog_3 = blog_files[FLAT_MULTIPLE_LINKS_TEST][2]
+              program.start('--explore', blog_3)
+              program = TestedProgram()
+              output = program.start("--list").strip()
+      
+              if f"{blog_1} {blog_1}" not in output or f"{blog_2} {blog_2}" not in output or f'{blog_3} {blog_3}' not in output:
+                  raise CheckResult.wrong("The --list command did not list all the blog sites in the watch list correctly. "
+                                          "May be explore functionality is not implemented correctly")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test3_remove_command(self):
+              # Test the --remove sub-command which removes a blog from the watch list
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog_1 = blog_files[FLAT_MULTIPLE_LINKS_TEST][0]
+              program.start('--explore', blog_1)
+              program = TestedProgram()
+              blog_2 = blog_files[FLAT_MULTIPLE_LINKS_TEST][1]
+              program.start('--explore', blog_2)
+              program = TestedProgram()
+              program.start('--remove', blog_1).strip()
+      
+              program = TestedProgram()
+              output = program.start("--list").strip()
+      
+              if f"{blog_1} {blog_1}" in output:
+                  raise CheckResult.wrong(
+                      "The --list command shows wrong output, seams like '--remove' flag was not implemented correctly")
+      
+              if f"{blog_2} {blog_2}" not in output:
+                  raise CheckResult.wrong(
+                      "The --list command shows wrong output, seams like '--remove' flag was not implemented correctly")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test4_crawling_with_no_hyperlinks(self):
+              # Test the crawl flag and list-posts sub-command.
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              program.start('--explore', blog_files[NO_LINKS_TEST])
+              program = TestedProgram()
+              program.start("--crawl")
+      
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog_files[NO_LINKS_TEST])
+      
+              output.strip()
+      
+              # Expected links from the example output
+              expected_output = ""
+      
+              # Check if all expected links are present in the output
+              if expected_output != output:
+                  return CheckResult.wrong(
+                      f"The output of the program does not match the expected output for the list-posts sub-command."
+                      f"\nYour program output: {output}"
+                      f"\nExpected output: {expected_output}")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test5_crawling_with_nested_links_a(self):
+              # Test the crawl flag and list-posts sub-command for blog with one blog-posts.
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_LINKS_TEST_1][-1]
+              program.start('--explore', blog)
+              program = TestedProgram()
+              program.start("--crawl")
+      
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+      
+              output.strip()
+      
+              # Expected links from the example output
+              expected_output = blog_files[NESTED_LINKS_TEST_1][0]
+      
+              # Check if all expected links are present in the output
+              if expected_output not in output:
+                  return CheckResult.wrong(
+                      f"Test was carried out for blog site with just one blog post expected_output: {expected_output} program_output: {output}")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test6_crawling_with_nested_links_b(self):
+              # Test the crawl flag and list-posts sub-command for blog with 2 nested blog-posts.
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_LINKS_TEST_2][-1]
+              program.start('--explore', blog)
+              program = TestedProgram()
+              program.start("--crawl")
+      
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+      
+              output.strip()
+      
+              # Expected links from the example output
+              expected_output = blog_files[NESTED_LINKS_TEST_2][:-1]
+      
+              # Check if all expected links are present in the output
+              for link in expected_output:
+                  if link not in output:
+                      return CheckResult.wrong(f"Test was carried out for blog site with two blog posts {link} not found in "
+                                               f"the program output")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test7_crawling_with_flat_multiple_pages(self):
+              # Test the crawl flag and list-posts sub-command for blog with many blog-posts.
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[FLAT_MULTIPLE_LINKS_TEST][-1]
+              program.start('--explore', blog)
+              program = TestedProgram()
+              program.start("--crawl")
+      
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+      
+              output.strip()
+      
+              # Expected links from the example output
+              expected_output = blog_files[FLAT_MULTIPLE_LINKS_TEST][:-1]
+      
+              # Check if all expected links are present in the output
+              for link in expected_output:
+                  if link not in output:
+                      return CheckResult.wrong(
+                          f"Test was carried out for blog site with multiple blog posts {link} not found in "
+                          f"the program output")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test8_crawling_with_nested_and_flat_posts(self):
+              # Test the crawl flag and list-posts sub-command for blog with many blog-posts (flat and nested).
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[NESTED_AND_FLAT_LINKS_TEST][-1]
+              program.start('--explore', blog)
+              program = TestedProgram()
+              program.start("--crawl")
+      
+              program = TestedProgram()
+              output = program.start("list-posts", "--site", blog)
+      
+              # Expected links from the example output
+              expected_links = blog_files[NESTED_AND_FLAT_LINKS_TEST][:-1]
+      
+              # Check if all expected links are present in the output
+              for link in expected_links:
+                  if link not in output:
+                      return CheckResult.wrong(
+                          f"Test was carried out for blog site with multiple blog posts flat and nested. {link} not found in "
+                          f"the program output")
+      
+              return CheckResult.correct()
+      
+          @dynamic_test(time_limit=120000)
+          def test9_crawling_and_update_last_link(self):
+              # Test the crawl flag and checking if the last_link column of the blogs table is updated.
+              remove_db_file()
+              program = TestedProgram()
+              program.start("--migrate")
+              program = TestedProgram()
+              blog = blog_files[FLAT_MULTIPLE_LINKS_TEST][-1]
+              program.start('--explore', blog)
+              program = TestedProgram()
+              program.start("--crawl")
+      
+              program = TestedProgram()
+              output = program.start("--list")
+      
+              output.strip()
+      
+              # Check if all expected links are present in the output
+              for link in blog_files[FLAT_MULTIPLE_LINKS_TEST][:-1]:
+                  if f'{blog} {link}' in output:
+                      return CheckResult.correct()
+      
+              return CheckResult.wrong(
+                  f"Test was carried out for blog site with multiple blog posts seems like the last_link column in the blogs "
+                  f"table is not updated after crawling")
+      
+      
+      if __name__ == '__main__':
+          TestBlogNotifierCLI().run_tests()
+    learner_created: false
+  - name: tests.py
+    visible: false
+    text: |
+      import multiprocessing
+      from test.tests import TestBlogNotifierCLI
+      from test.blognotifier_test_utils import *
+      
+      if __name__ == '__main__':
+          # TestBlogNotifierCLI().run_tests()
+          http_server_process: multiprocessing.Process = None
+          try:
+              # creating fake blog(just html files) for testing
+              create_blog_site_with_no_posts()
+              create_blog_site_with_nested_posts(1, NESTED_LINKS_TEST_1)
+              create_blog_site_with_nested_posts(2, NESTED_LINKS_TEST_2)
+              create_flat_blog_site_with_multiple_posts()
+              create_blog_site_with_nested_and_flat_posts()
+              # starting python's http.server
+              http_server_process = multiprocessing.Process(target=run_http_server, args=(8000,))
+              http_server_process.start()
+              # running tests
+              TestBlogNotifierCLI().run_tests()
+          finally:
+              # stopping python's http.server
+              # http_server_process.kill()
+              if http_server_process:
+                  http_server_process.terminate()
+                  http_server_process.join()
+              # removing all the html files created
+              remove_fake_blog()
+    learner_created: false
+feedback_link: https://hyperskill.org/learn/step/43940#comment
+check_profile: hyperskill_go
+status: Unchecked
+record: -1
