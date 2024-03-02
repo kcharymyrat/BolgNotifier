@@ -309,7 +309,42 @@ files:
       if __name__ == '__main__':
           TestBlogNotifierCLI('blog_notifier.blog_notifier').run_tests()
     learner_created: false
+  - name: go.sum
+    visible: true
+    text: |
+      gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+      gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+      gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+    learner_created: true
+  - name: go.mod
+    visible: true
+    text: |
+      module task
+      
+      go 1.22.0
+      
+      require gopkg.in/yaml.v3 v3.0.1 // indirect
+    learner_created: true
+  - name: models.go
+    visible: true
+    learner_created: true
+  - name: yaml_configs.go
+    visible: true
+    learner_created: true
+  - name: constants.go
+    visible: true
+    learner_created: true
+  - name: utils.go
+    visible: true
+    learner_created: true
+  - name: blogs.sqlite3
+    visible: true
+    is_binary: true
+    learner_created: true
 feedback_link: https://hyperskill.org/learn/step/43938#comment
 check_profile: hyperskill_go
-status: Unchecked
+status: Solved
+feedback:
+  message: <html>Correct solution</html>
+  time: "Sat, 02 Mar 2024 06:04:44 UTC"
 record: -1
