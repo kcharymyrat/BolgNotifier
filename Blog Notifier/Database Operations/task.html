@@ -3,30 +3,72 @@
 <p>There are lots of good blogs that we would like to follow. But how do we keep track of our favorite blogs. In this stage we will create a watch list for our favorite blogs and store that list into a database.  In the second stage, you will develop the functionality to create and migrate a database schema and implement methods for CRUD operations to manage table records. The database must have the following schema:</p>
 <h5 id="database-schema">Database schema</h5>
 <p>The database must have the tables titled <code class="language-bash">blogs</code>, <code class="language-bash">posts</code> and <code class="language-bash">mails</code> .</p>
-<p>The <code class="language-bash">blogs</code> table must have the columns:</p>
-<ul>
-<li>site            VARCHAR(256) PRIMARY KEY</li>
-<li>last_link    VARCHAR(256)</li>
-</ul>
-<p>The <code class="language-bash">posts</code> table must have the columns:</p>
-<ul>
-<li>site    VARCHAR(256)</li>
-<li>link    VARCHAR(256)</li>
-</ul>
-<p><code class="language-bash">site</code> in the <code class="language-bash">posts</code> table  references <code class="language-bash">site</code> in the <code class="language-bash">blogs</code> table, and should implement ON DELETE CASCADE (when a blog site is deleted from the <code class="language-bash">blogs</code> table all the corresponding posts in the <code class="language-bash">posts</code> table must be <strong>deleted</strong> as well)</p>
-<p>The <code class="language-bash">mails</code> table must have the columns:</p>
-<ul>
-<li>id             INTEGER PRIMARY KEY AUTOINCREMENT</li>
-<li>mail        TEXT</li>
-<li>is_sent    INTEGER DEFAULT 0</li>
-</ul>
+<p>The <code class="language-bash">blogs</code> table must have the following columns:</p>
+<table style="width: 350px;">
+<thead>
+<tr>
+<th colspan="2" style="font-size: 18px; text-align: center; border: 1px solid black;">blogs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">site</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">VARCHAR(256), PRIMARY KEY</code></td>
+</tr>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">last_link</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">VARCHAR(256)</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="language-bash">posts</code> table must have the following columns:</p>
+<table style="width: 350px;">
+<thead>
+<tr>
+<th colspan="2" style="font-size: 18px; text-align: center; border: 1px solid black;">posts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">site</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">VARCHAR(256), FOREIGN KEY(blogs)</code></td>
+</tr>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">link</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">VARCHAR(256)</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="language-bash">site</code> column in the <code class="language-bash">posts</code> table references <code class="language-bash">site</code> in the <code class="language-bash">blogs</code> table, and must implement <code class="language-bash">ON DELETE CASCADE</code> (when a blog site is deleted from the <code class="language-bash">blogs</code> table, all the corresponding posts in the <code class="language-bash">posts</code> table must be <strong>deleted</strong> as well).</p>
+<p>The <code class="language-bash">mails</code> table must have the following columns:</p>
+<table style="width: 400px;">
+<thead>
+<tr>
+<th colspan="2" style="font-size: 18px; text-align: center; border: 1px solid black;">mails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">id</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">INTEGER, PRIMARY KEY, AUTOINCREMENT</code></td>
+</tr>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">mail</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">TEXT</code></td>
+</tr>
+<tr>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">is_sent</code></td>
+<td style="text-align: center; border: 1px solid black;"><code class="language-bash">INTEGER DEFAULT 0</code></td>
+</tr>
+</tbody>
+</table>
 <h5 id="objectives">Objectives</h5>
-<p>In this stage, you will</p>
+<p>In this stage, you will:</p>
 <ul>
 <li>Implement <code class="language-bash">--migrate</code> sub-command for this CLI. This sub-command should create database tables with the following schema.</li>
 <li>Implement <code class="language-bash">--explore</code> sub-command for this CLI. This sub-command takes web address of the blog and inserts a new entry into the <code class="language-bash">blogs</code> table of the database. kind of like adding a blog site to a watch list.</li>
 <li>Implement <code class="language-bash">--list</code> sub-command for this CLI. This sub-command lists all the blog sites that are in the <code class="language-bash">blogs</code> table. Kind of like listing all the blog sites that are currently in the watch list.</li>
-<li>Implement <code class="language-bash">updateLastLink</code> sub-command for this CLI. This sub-command takes web address of the blog let's call it <code class="language-bash">blogAddr</code> and also the web address of the blog post let's call it <code class="language-bash">postAddr</code> and then updates the <code class="language-bash">last_link</code> column with value equal to the <code class="language-bash">postAddr</code> in the <code class="language-bash">blogs</code> table where <code class="language-bash">site</code> equals <code class="language-bash">blogAddr</code> with the</li>
+<li>Implement <code class="language-bash">updateLastLink</code> sub-command for this CLI. This sub-command takes web address of the blog let's call it <code class="language-bash">blogAddr</code> and also the web address of the blog post let's call it <code class="language-bash">postAddr</code> and then updates the <code class="language-bash">last_link</code> column with value equal to the <code class="language-bash">postAddr</code> in the <code class="language-bash">blogs</code> table where <code class="language-bash">site</code> equals <code class="language-bash">blogAddr</code> with the <code class="language-bash">postAddr</code>.</li>
 <li>Implement <code class="language-bash">--remove</code> sub-command for this CLI. This sub-command takes web address of the blog and deletes that entry from the blogs table, if it exists. kind of like removing a blog site from the watch list.</li>
 </ul>
 <h5 id="examples">Examples</h5>
@@ -37,31 +79,31 @@
 <h5 id="testing-for-the-sub-command-explore">Testing for the sub-command <code class="language-bash">--explore</code></h5>
 <p>When the <code class="language-bash">blognotifier --explore "https://hyperskill.org/blog/"</code> sub-command is run, your program must add an entry with <code class="language-bash">site</code> and <code class="language-bash">last_link</code> equal to <code class="language-bash">"https://hyperskill.org/blog/"</code>, into the <code class="language-bash">blogs</code> table of the database.</p>
 <h5 id="testing-for-the-sub-command-list">Testing for the sub-command <code class="language-bash">--list</code></h5>
-<p>When the <code class="language-bash">blognotifier --list</code> sub-command is run, your program must output all the entries that are currently in the blogs table of the database in the following format: <code class="language-bash">&lt;site&gt; &lt;last_link&gt;</code>, replace <code class="language-bash">&lt;site&gt;</code>, and <code class="language-bash">&lt;last_link&gt;</code> with the <code class="language-bash">site</code> and the <code class="language-bash">last_link</code> columns for each entry in the blogs database. For example, let's say we have the following entries currently in the blogs table of the database:</p>
-<table border="1" cellpadding="1" cellspacing="1" style="width: 500px;">
+<p>When the <code class="language-bash">blognotifier --list</code> sub-command is run, your program must output all the entries that are currently in the blogs table of the database in the following format: <code class="language-bash">&lt;site&gt; &lt;last_link&gt;</code>, replace <code class="language-bash">&lt;site&gt;</code>, and <code class="language-bash">&lt;last_link&gt;</code> with the <code class="language-bash">site</code> and the <code class="language-bash">last_link</code> columns for each entry in the <code class="language-bash">blogs</code> database. For example, let's say we have the following entries currently in the blogs table of the database:</p>
+<table style="width: 500px; border: 1px solid black;">
 <thead>
 <tr>
-<th>site</th>
-<th>last_link</th>
+<th style="border: 1px solid black; padding: 1px;">site</th>
+<th style="border: 1px solid black; padding: 1px;">last_link</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>https://blog1.com</td>
-<td>https://blog1.com/post100</td>
+<td style="border: 1px solid black; padding: 1px;">https://blog1.com</td>
+<td style="border: 1px solid black; padding: 1px;">https://blog1.com/post100</td>
 </tr>
 <tr>
-<td>https://blog2.com</td>
-<td>https://blog2.com/post1</td>
+<td style="border: 1px solid black; padding: 1px;">https://blog2.com</td>
+<td style="border: 1px solid black; padding: 1px;">https://blog2.com/post1</td>
 </tr>
 </tbody>
 </table>
-<p> your program must output the following to the <code class="language-bash">stdout</code>:</p>
+<p>Your program must output the following to the <code class="language-bash">stdout</code>:</p>
 <pre><code class="language-bash">https://blog1.com https://blog1.com/post100
 https://blog2.com https://blog2.com/post1</code></pre>
-<h5 id="testing-for-the-sub-command-updatelastlink"> Testing for the sub-command <code class="language-bash">updateLastLink</code></h5>
+<h5 id="testing-for-the-sub-command-updatelastlink">Testing for the sub-command <code class="language-bash">updateLastLink</code></h5>
 <p>When the <code class="language-bash">blognotifier updateLastLink --site "blogSite" --post "newPost"</code> sub-command is run, your program must update the <code class="language-bash">blogs</code> table in the database, by updating the <code class="language-bash">last_link</code> column with the value <code class="language-bash">newPost</code> where <code class="language-bash">site</code> equals <code class="language-bash">blogSite</code>.</p>
-<h5 id="testing-for-the-sub-command-remove"> Testing for the sub-command <code class="language-bash">--remove</code></h5>
+<h5 id="testing-for-the-sub-command-remove">Testing for the sub-command <code class="language-bash">--remove</code></h5>
 <p>When the <code class="language-bash">blognotifier --remove "blogSite"</code> sub-command is run, your program must remove the entry in the <code class="language-bash">blogs</code> table in the database where <code class="language-bash">site</code> equals <code class="language-bash">blogSite</code>.</p>
 
 </div>

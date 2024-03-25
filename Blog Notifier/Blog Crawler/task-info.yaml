@@ -14,39 +14,55 @@ files:
     \ import Template\n\nDB_FILE = 'blogs.sqlite3'\nNO_LINKS_TEST = 'no_links'\nFLAT_MULTIPLE_LINKS_TEST\
     \ = 'flat_multiple_links'\nNESTED_LINKS_TEST_1 = 'nested_links_1'\nNESTED_LINKS_TEST_2\
     \ = 'nested_links_2'\nNESTED_AND_FLAT_LINKS_TEST = 'nested_and_flat_links'\n\n\
-    FAKE_BLOG = \"fake-blog\"\nblog_addr = f\"http://localhost:8000/{FAKE_BLOG}/\"\
-    \n\ntables_properties = {\n    'blogs': {\n        'site': 'TEXT',\n        'last_link':\
-    \ 'TEXT'\n    },\n    'posts': {\n        'link': 'TEXT',\n        'site': 'TEXT'\n\
-    \    },\n    'mails': {\n        'id': 'INTEGER',\n        'mail': 'TEXT',\n \
-    \       'is_sent': 'INTEGER'\n    }\n}\n\npage_template = \"\"\"<!DOCTYPE html>\n\
-    <html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\"\
-    \ content=\"width=device-width, initial-scale=1.0\">\n    <title>Random Blog Post</title>\n\
-    \    <style>\n        body {\n            font-family: Arial, sans-serif;\n  \
-    \          line-height: 1.6;\n            max-width: 800px;\n            margin:\
-    \ 0 auto;\n            padding: 20px;\n        }\n        .post {\n          \
-    \  margin-bottom: 20px;\n            border: 1px solid #ccc;\n            padding:\
-    \ 15px;\n            border-radius: 8px;\n            background-color: #fff;\n\
-    \        }\n\n        h1 {\n            color: #333;\n        }\n\n        p {\n\
-    \            color: #666;\n            word-break: break-all;\n            white-space:\
-    \ normal;\n        }\n\n        a {\n            color: #007BFF;\n           \
-    \ text-decoration: none;\n            font-weight: bold;\n        }\n\n      \
-    \  a:hover {\n            text-decoration: underline;\n        }\n    </style>\n\
-    </head>\n<body>\n    $body        \n</body>\n</html>\"\"\"\n\nlink_template =\
-    \ \"\"\"<div class=\"post\">\n    <p><a href=\"$postaddr\">$name</a></p>\n</div>\"\
-    \"\"\n\npost_template = \"\"\"<div class=\"post\">\n        <p>$body</p>\n   \
-    \ </div>\"\"\"\n\nhtml_files = []\nblog_files = {}\n\n\ndef check_table_exists(table_name:\
-    \ str) -> bool:\n    connection = sqlite3.connect(DB_FILE)  # Replace 'your_database.db'\
-    \ with your database file\n    # Create a cursor object\n    cursor = connection.cursor()\n\
+    FAKE_BLOG = \"fake-blog\"\nPORT = 8000\nADDRESS = \"127.0.0.1\"\nblog_addr = f\"\
+    http://{ADDRESS}:{PORT}/{FAKE_BLOG}/\"\n\ntables_properties = {\n    'blogs':\
+    \ {\n        'site': 'TEXT',\n        'last_link': 'TEXT'\n    },\n    'posts':\
+    \ {\n        'link': 'TEXT',\n        'site': 'TEXT',\n    },\n    'mails': {\n\
+    \        'id': 'INTEGER',\n        'mail': 'TEXT',\n        'is_sent': 'INTEGER'\n\
+    \    }\n}\n\npage_template = \"\"\"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n\
+    \    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width,\
+    \ initial-scale=1.0\">\n    <title>Random Blog Post</title>\n    <style>\n   \
+    \     body {\n            font-family: Arial, sans-serif;\n            line-height:\
+    \ 1.6;\n            max-width: 800px;\n            margin: 0 auto;\n         \
+    \   padding: 20px;\n        }\n        .post {\n            margin-bottom: 20px;\n\
+    \            border: 1px solid #ccc;\n            padding: 15px;\n           \
+    \ border-radius: 8px;\n            background-color: #fff;\n        }\n\n    \
+    \    h1 {\n            color: #333;\n        }\n\n        p {\n            color:\
+    \ #666;\n            word-break: break-all;\n            white-space: normal;\n\
+    \        }\n\n        a {\n            color: #007BFF;\n            text-decoration:\
+    \ none;\n            font-weight: bold;\n        }\n\n        a:hover {\n    \
+    \        text-decoration: underline;\n        }\n    </style>\n</head>\n<body>\n\
+    \    $body        \n</body>\n</html>\"\"\"\n\nlink_template = \"\"\"<div class=\"\
+    post\">\n    <p><a href=\"$postaddr\">$name</a></p>\n</div>\"\"\"\n\npost_template\
+    \ = \"\"\"<div class=\"post\">\n        <p>$body</p>\n    </div>\"\"\"\n\nhtml_files\
+    \ = []\nblog_files = {}\n\n\ndef check_table_exists(table_name: str) -> bool:\n\
+    \    connection = sqlite3.connect(DB_FILE)  # Replace 'your_database.db' with\
+    \ your database file\n    # Create a cursor object\n    cursor = connection.cursor()\n\
     \    cursor.execute(f\"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'\"\
     )\n    # Fetch the result\n    result = cursor.fetchone()\n    cursor.close()\n\
     \    connection.close()\n    return result is not None\n\n\ndef check_table_properties(table_name)\
-    \ -> tuple:\n    # Connect to the SQLite database\n    connection = sqlite3.connect(DB_FILE)\
-    \  # Replace 'your_database.db' with your database file\n    # Create a cursor\
-    \ object\n    cursor = connection.cursor()\n    cursor.execute(f\"PRAGMA table_info({table_name})\"\
-    )\n    # Fetch all the rows from the result\n    columns_info = cursor.fetchall()\n\
-    \    columns_info = {column[1]: column[2] for column in columns_info}\n    cursor.close()\n\
-    \    connection.close()\n    return (tables_properties[table_name] == columns_info,\
-    \ columns_info)\n\n\ndef remove_db_file():\n    print(os.curdir)\n    if os.path.exists(DB_FILE):\n\
+    \ -> tuple:\n    # Connect to the SQLite database\n    connection = sqlite3.connect(DB_FILE)\n\
+    \    # Create a cursor object\n    cursor = connection.cursor()\n    cursor.execute(f\"\
+    PRAGMA table_info({table_name})\")\n    # Fetch all the rows from the result\n\
+    \    columns_info = cursor.fetchall()\n    # Convert fetched data into a dictionary\
+    \ {column_name: column_type}\n    columns_info_dict = {column[1]: column[2].upper()\
+    \ for column in columns_info}  # Convert types to uppercase\n    cursor.close()\n\
+    \    connection.close()\n\n    # Define columns automatically added by GORM that\
+    \ should be ignored\n    gorm_columns = {'created_at', 'updated_at', 'deleted_at'}\n\
+    \n    # Optionally include 'id' in gorm_columns if it's not a strict requirement\n\
+    \    if 'id' not in tables_properties[table_name]:\n        gorm_columns.add('id')\n\
+    \n    # Filter out the GORM-specific columns and optionally 'id' from the columns_info_dict\n\
+    \    filtered_columns_info = {k: v for k, v in columns_info_dict.items() if k\
+    \ not in gorm_columns}\n\n    # Check if all required columns and their types\
+    \ exist in the filtered table structure\n    required_columns = tables_properties[table_name]\n\
+    \    for col_name, col_type in required_columns.items():\n        # Check presence\
+    \ and type of required columns, comparing types in uppercase\n        if col_name\
+    \ not in filtered_columns_info or filtered_columns_info[col_name] != col_type.upper():\n\
+    \            # If a required column is missing or has a different type, return\
+    \ False with found columns info\n            return False, filtered_columns_info\n\
+    \n    # If all required columns are present and have correct types, return True\
+    \ with the filtered columns info\n    return True, filtered_columns_info\n\n\n\
+    def remove_db_file():\n    print(os.curdir)\n    if os.path.exists(DB_FILE):\n\
     \        os.remove(DB_FILE)\n\n\ndef remove_fake_blog():\n    folder_path = os.path.join(os.getcwd(),\
     \ FAKE_BLOG)\n    shutil.rmtree(folder_path)\n\n\ndef create_html_file(file_name,\
     \ content):\n    folder_path = os.path.join(os.getcwd(), FAKE_BLOG)\n    if not\
@@ -376,11 +392,11 @@ files:
     visible: false
     text: |
       import multiprocessing
+      
       from test.tests import TestBlogNotifierCLI
       from test.blognotifier_test_utils import *
       
       if __name__ == '__main__':
-          # TestBlogNotifierCLI().run_tests()
           http_server_process: multiprocessing.Process = None
           try:
               # creating fake blog(just html files) for testing
@@ -389,11 +405,13 @@ files:
               create_blog_site_with_nested_posts(2, NESTED_LINKS_TEST_2)
               create_flat_blog_site_with_multiple_posts()
               create_blog_site_with_nested_and_flat_posts()
+      
               # starting python's http.server
               http_server_process = multiprocessing.Process(target=run_http_server, args=(8000,))
               http_server_process.start()
+      
               # running tests
-              TestBlogNotifierCLI().run_tests()
+              TestBlogNotifierCLI('blog_notifier.blog_notifier').run_tests()
           finally:
               # stopping python's http.server
               # http_server_process.kill()
