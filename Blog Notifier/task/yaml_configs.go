@@ -20,15 +20,15 @@ type EmailClient struct {
 
 type TelegramClient struct {
 	BotToken string `yaml:"bot_token"`
-	Chanel   string `yaml:"channel"`
+	Channel  string `yaml:"channel"`
 }
 
-type Config struct {
-	Mode     string         `yaml:"mode"`
-	Server   EmailServer    `yaml:"server"`
-	Client   EmailClient    `yaml:"client"`
-	Telegram TelegramClient `yaml:"telegram"`
-}
+//type Config struct {
+//	Mode     string         `yaml:"mode"`
+//	Server   EmailServer    `yaml:"server"`
+//	Client   EmailClient    `yaml:"client"`
+//	Telegram TelegramClient `yaml:"telegram"`
+//}
 
 func yamlToStruct(yamlData []byte) (Config, error) {
 	var config Config

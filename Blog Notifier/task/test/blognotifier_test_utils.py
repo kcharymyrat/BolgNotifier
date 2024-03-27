@@ -1,22 +1,34 @@
-import http.server
-import http.server
-import os
-import random
-import shutil
-import socket
-import socketserver
+import random, os, socketserver, http.server, shutil, sqlite3
 from string import Template
 
+DB_FILE = 'blogs.sqlite3'
 NO_LINKS_TEST = 'no_links'
 FLAT_MULTIPLE_LINKS_TEST = 'flat_multiple_links'
-NESTED_LINKS_TEST = 'nested_links'
+NESTED_LINKS_TEST_1 = 'nested_links_1'
+NESTED_LINKS_TEST_2 = 'nested_links_2'
 NESTED_AND_FLAT_LINKS_TEST = 'nested_and_flat_links'
-CYCLIC_LINKS_TEST = 'cyclic_reference'
 
 FAKE_BLOG = "fake-blog"
 PORT = 8000
 ADDRESS = "127.0.0.1"
 blog_addr = f"http://{ADDRESS}:{PORT}/{FAKE_BLOG}/"
+
+tables_properties = {
+    'blogs': {
+        'site': 'TEXT',
+        'last_link': 'TEXT'
+    },
+    'posts': {
+        'link': 'TEXT',
+        'site': 'TEXT',
+    },
+    'mails': {
+        'id': 'INTEGER',
+        'mail': 'TEXT',
+        'is_sent': 'INTEGER'
+    }
+}
+
 page_template = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -77,6 +89,59 @@ html_files = []
 blog_files = {}
 
 
+def check_table_exists(table_name: str) -> bool:
+    connection = sqlite3.connect(DB_FILE)  # Replace 'your_database.db' with your database file
+    # Create a cursor object
+    cursor = connection.cursor()
+    cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+    # Fetch the result
+    result = cursor.fetchone()
+    cursor.close()
+    connection.close()
+    return result is not None
+
+
+def check_table_properties(table_name) -> tuple:
+    # Connect to the SQLite database
+    connection = sqlite3.connect(DB_FILE)
+    # Create a cursor object
+    cursor = connection.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    # Fetch all the rows from the result
+    columns_info = cursor.fetchall()
+    # Convert fetched data into a dictionary {column_name: column_type}
+    columns_info_dict = {column[1]: column[2].upper() for column in columns_info}  # Convert types to uppercase
+    cursor.close()
+    connection.close()
+
+    # Define columns automatically added by GORM that should be ignored
+    gorm_columns = {'created_at', 'updated_at', 'deleted_at'}
+
+    # Optionally include 'id' in gorm_columns if it's not a strict requirement
+    if 'id' not in tables_properties[table_name]:
+        gorm_columns.add('id')
+
+    # Filter out the GORM-specific columns and optionally 'id' from the columns_info_dict
+    filtered_columns_info = {k: v for k, v in columns_info_dict.items() if k not in gorm_columns}
+
+    # Check if all required columns and their types exist in the filtered table structure
+    required_columns = tables_properties[table_name]
+    for col_name, col_type in required_columns.items():
+        # Check presence and type of required columns, comparing types in uppercase
+        if col_name not in filtered_columns_info or filtered_columns_info[col_name] != col_type.upper():
+            # If a required column is missing or has a different type, return False with found columns info
+            return False, filtered_columns_info
+
+    # If all required columns are present and have correct types, return True with the filtered columns info
+    return True, filtered_columns_info
+
+
+def remove_db_file():
+    print(os.curdir)
+    if os.path.exists(DB_FILE):
+        os.remove(DB_FILE)
+
+
 def remove_fake_blog():
     folder_path = os.path.join(os.getcwd(), FAKE_BLOG)
     shutil.rmtree(folder_path)
@@ -89,12 +154,6 @@ def create_html_file(file_name, content):
     file_path = os.path.join(folder_path, file_name)
     with open(file_path, 'w') as file:
         file.write(content)
-
-
-# def remove_html_files():
-#     for file_name in html_files:
-#         if os.path.exists(file_name):
-#             os.remove(file_name)
 
 
 def generate_random_text(k: int) -> str:
@@ -164,7 +223,7 @@ def _create_blog_site_with_nested_posts(depth: int, test_name):
 # this will create website with the following pattern: a.html contains link to b.html, b.html contains link to
 # c.html, c.html contain link to d.html. depending on the parameter depth, this is created for the test to ensure
 # that the blog crawler does not go into endless recursion.
-def create_blog_site_with_nested_posts(depth: int, test_name=NESTED_LINKS_TEST):
+def create_blog_site_with_nested_posts(depth: int, test_name: str):
     blog_files[test_name] = []
     parent_name = _create_blog_site_with_nested_posts(depth, test_name)
     return parent_name
@@ -198,25 +257,18 @@ def create_blog_site_with_nested_and_flat_posts():
         blog_files[NESTED_AND_FLAT_LINKS_TEST].append(postaddr)
 
     # creating blog posts with nested links of depth 2
+    nested_post_1 = create_blog_site_with_nested_posts(depth=1, test_name='nested_links_1')
+    t = Template(link_template)
+    l += t.substitute({'postaddr': f"{blog_addr}{nested_post_1}.html", 'name': nested_post_1})
+    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_1'][-1::-1])
+    # visualize_nested_blogs(blog_files['nested_links_2'][-1::-1], 'nested_links_2.txt')
+
+    # creating blog posts with nested links of depth 3
     nested_post_2 = create_blog_site_with_nested_posts(depth=2, test_name='nested_links_2')
     t = Template(link_template)
     l += t.substitute({'postaddr': f"{blog_addr}{nested_post_2}.html", 'name': nested_post_2})
     blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_2'][-1::-1])
-    # visualize_nested_blogs(blog_files['nested_links_2'][-1::-1], 'nested_links_2.txt')
-
-    # creating blog posts with nested links of depth 3
-    nested_post_3 = create_blog_site_with_nested_posts(depth=3, test_name='nested_links_3')
-    t = Template(link_template)
-    l += t.substitute({'postaddr': f"{blog_addr}{nested_post_3}.html", 'name': nested_post_3})
-    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_3'][-1:-4:-1])
     # visualize_nested_blogs(blog_files['nested_links_3'][-1::-1], 'nested_links_3.txt')
-
-    # creating blog posts with nested links of depth 4
-    nested_post_4 = create_blog_site_with_nested_posts(depth=4, test_name='nested_links_4')
-    t = Template(link_template)
-    l += t.substitute({'postaddr': f"{blog_addr}{nested_post_4}.html", 'name': nested_post_4})
-    blog_files[NESTED_AND_FLAT_LINKS_TEST].extend(blog_files['nested_links_4'][-1:-4:-1])
-    # visualize_nested_blogs(blog_files['nested_links_4'][-1::-1], 'nested_links_4.txt')
 
     t = Template(page_template)
     blog_page = t.substitute({'body': l})
@@ -225,158 +277,9 @@ def create_blog_site_with_nested_and_flat_posts():
     blog_files[NESTED_AND_FLAT_LINKS_TEST].append(f'{blog_addr}index2.html')
 
 
-# this would create a blog site with the following pattern: a.html has link for b.html, b.html has link for a.html
-# and c.html, c.html does not have any hyperlinks
-def create_blog_with_cyclic_reference():
-    blog_files[CYCLIC_LINKS_TEST] = []
-    # creating c.html, notice it does not contain any hyperlinks
-    c_html = generate_random_text(k=4)
-    create_html_file(f'{c_html}.html',
-                     Template(page_template).substitute(
-                         {'body': f'<div class="post"><p>{generate_random_text(250)}</p></div>'}))
-    html_files.append(f'{c_html}.html')
-    blog_files[CYCLIC_LINKS_TEST].append(f'{blog_addr}{c_html}.html')
-
-    a_html = generate_random_text(k=4)
-    b_html = generate_random_text(k=4)
-
-    # body for a.html, notice it contains link for b.html
-    t_a = Template(link_template)
-    l_a = t_a.substitute({'postaddr': f'{blog_addr}{b_html}.html', 'name': b_html})
-
-    # body for b.html, notice it contains link for a.html and c.html
-    t_b = Template(link_template)
-    l_b = t_b.substitute({'postaddr': f'{blog_addr}{c_html}.html', 'name': c_html})
-    l_b += t_b.substitute({'postaddr': f'{blog_addr}{a_html}.html', 'name': a_html})
-
-    # creating b.html
-    create_html_file(f'{b_html}.html',
-                     Template(page_template).substitute(
-                         {'body': l_b}))
-    html_files.append(f'{b_html}.html')
-    blog_files[CYCLIC_LINKS_TEST].append(f'{blog_addr}{b_html}.html')
-
-    # creating a.html
-    create_html_file(f'{a_html}.html',
-                     Template(page_template).substitute(
-                         {'body': l_a}))
-    html_files.append(f'{a_html}.html')
-    blog_files[CYCLIC_LINKS_TEST].append(f'{blog_addr}{a_html}.html')
-
-
-def create_blog_site_with_duplicate_links():
-    index_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Blog Post</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }}
-        .post {{
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            padding: 15px;
-            border-radius: 8px;
-            background-color: #fff;
-        }}
-
-        h1 {{
-            color: #333;
-        }}
-
-        p {{
-            color: #666;
-        }}
-
-        a {{
-            color: #007BFF;
-            text-decoration: none;
-            font-weight: bold;
-        }}
-
-        a:hover {{
-            text-decoration: underline;
-        }}
-    </style>
-</head>
-<body>
-    <div class="post">
-        <h2> <a href="{blog_addr}a.html">This is blog post A</a></h2>
-        <p>This is the content of Blog Post A.</p>
-    </div>
-    <div class="post">
-        <h2> <a href="{blog_addr}b.html">This is blog post B</a></h2>
-        <p>This is the content of Blog Post B.</p>
-    </div>
-    <div class="post">
-        <h2> <a href="{blog_addr}c.html">This is blog post C</a></h2>
-        <p>This is the content of Blog Post C.</p>
-    </div>
-    <div class="post">
-        <h2> <a href="{blog_addr}d.html">This is blog post D</a></h2>
-        <p>This is the content of Blog Post D.</p>
-    </div>
-    <div class="post">
-        <h2><a href="{blog_addr}e.html">This is blog post E</a></h2>
-        <p>This is the content of Blog Post E.</p>
-    </div>
-    <div class="post">
-        <h2><a href="{blog_addr}f.html">This is blog post F</a></h2>
-        <p>This is the content of Blog Post F.</p>
-    </div>
-    <div class="post">
-        <h2><a href="{blog_addr}a.html">Blog Post A Title</a></h2>
-        <p>This is the content of Blog Post A.</p>
-    </div>
-</body>
-</html>
-"""
-
-    # Create individual blog post content
-    post_content = """
-    <html>
-    <head>
-        <title>Blog Post {char}</title>
-    </head>
-    <body>
-        <h1>This is blog post {char}</h1>
-        <p>This is the content of Blog Post {char}.</p>
-    </body>
-    </html>
-    """
-
-    blog_files['duplicate_links'] = [
-        f"{blog_addr}a.html",
-        f"{blog_addr}b.html",
-        f"{blog_addr}c.html",
-        f"{blog_addr}d.html",
-        f"{blog_addr}e.html",
-        f"{blog_addr}f.html",
-        blog_addr
-    ]
-
-    create_html_file("index.html", index_content)
-
-    # Create individual blog post files
-    for char in ['a', 'b', 'c', 'd', 'e', 'f']:
-        create_html_file(f"{char}.html", post_content.format(char=char))
-
-
 def run_http_server(port):
     # Create an HTTP server with the specified port and handler
     handler = http.server.SimpleHTTPRequestHandler
-
-    # Create a TCPServer instance with the specified port and handler
     with socketserver.TCPServer(("", port), handler) as httpd:
-        # Set SO_REUSEADDR option to allow immediate reuse of the port
-        httpd.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
         print(f"Serving on port {port}")
         httpd.serve_forever()
