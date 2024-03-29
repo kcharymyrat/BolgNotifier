@@ -1,11 +1,15 @@
 import random, os, socketserver, http.server, shutil, sqlite3
 from string import Template
+from multiprocessing import Queue
+from aiosmtpd.controller import Controller
+from aiosmtpd.smtp import Envelope
 
 DB_FILE = 'blogs.sqlite3'
 NO_LINKS_TEST = 'no_links'
 FLAT_MULTIPLE_LINKS_TEST = 'flat_multiple_links'
 NESTED_LINKS_TEST_1 = 'nested_links_1'
 NESTED_LINKS_TEST_2 = 'nested_links_2'
+NESTED_LINKS_TEST_3 = 'nested_links_3'
 NESTED_AND_FLAT_LINKS_TEST = 'nested_and_flat_links'
 
 FAKE_BLOG = "fake-blog"
@@ -85,8 +89,11 @@ post_template = """<div class="post">
         <p>$body</p>
     </div>"""
 
-html_files = []
-blog_files = {}
+html_files = []  # stores the names os all the html files created for test cases. used for cleaning purposes at the end
+blog_files = {}  # stores the html file names used in test cases
+
+
+# controller_info = {}  # used for storing the default smtp server address
 
 
 def check_table_exists(table_name: str) -> bool:
@@ -137,7 +144,6 @@ def check_table_properties(table_name) -> tuple:
 
 
 def remove_db_file():
-    print(os.curdir)
     if os.path.exists(DB_FILE):
         os.remove(DB_FILE)
 
@@ -158,6 +164,24 @@ def create_html_file(file_name, content):
 
 def generate_random_text(k: int) -> str:
     return "".join(random.choices("abcdefghijklmnopqrstuvwxyz123456789", k=k))
+
+
+config_map = {
+    'mode': 'mail',
+    'server': {
+        'host': '127.0.0.1',
+        'port': 8025
+    },
+    'client': {
+        'email': 'this field will be populated at run time',
+        'password': 'this field will be populated at run time',
+        'send_to': 'this field will be populated at run time'
+    },
+    'telegram': {
+        'bot_token': generate_random_text(k=7),
+        'channel': generate_random_text(k=6)
+    }
+}
 
 
 # only one html file containing no links will be created
@@ -279,7 +303,51 @@ def create_blog_site_with_nested_and_flat_posts():
 
 def run_http_server(port):
     # Create an HTTP server with the specified port and handler
-    handler = http.server.SimpleHTTPRequestHandler
-    with socketserver.TCPServer(("", port), handler) as httpd:
-        print(f"Serving on port {port}")
-        httpd.serve_forever()
+    try:
+        handler = http.server.SimpleHTTPRequestHandler
+        with socketserver.TCPServer(("", port), handler) as httpd:
+            print(f"Serving on port {port}")
+            httpd.serve_forever()
+    finally:
+        print('from run_http_server func: http server stopped')
+
+
+def create_yaml_file(file_name, content):
+    with open(file_name, 'w') as file:
+        file.write(content)
+
+
+def remove_yaml_file(file_name):
+    if os.path.exists(file_name):
+        os.remove(file_name)
+
+
+# mail_queue: Queue  # = Queue()  # aiosmtpd server will put mails it receives from the program in this queue
+# stop_server_signal_queue: Queue  # = Queue()  # is used to send signal when to stop aiosmtpd server
+
+
+class MyHandler:
+    def __init__(self, queue: Queue):
+        self.queue = queue
+
+    async def handle_DATA(self, server, session, envelope: Envelope):
+        # mail = json.loads(envelope.content.decode('utf8', errors='replace'))
+        print(envelope.content)
+        self.queue.put({
+            'from': envelope.mail_from,
+            'to': envelope.rcpt_tos[0],
+            'message': envelope.content.decode('utf8', errors='replace')
+        })
+        return '250 Message accepted for delivery'
+
+
+def start_smtp_server(mail_queue: Queue, stop_server_signal_queue: Queue):
+    handler = MyHandler(mail_queue)
+    controller = Controller(handler, hostname='127.0.0.1', port=8025)
+    controller.start()
+    print('smtp server started')
+    mail_queue.put(controller.hostname)
+    mail_queue.put(controller.port)
+    # blocks until stop signal is received, this is necessary to ensure the server is not closed prematurely
+    stop_server_signal_queue.get()
+    controller.stop()

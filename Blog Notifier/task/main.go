@@ -6,7 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/smtp"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/PuerkitoBio/goquery"
@@ -27,6 +29,9 @@ const (
 
 	Crawl     string = "crawl"
 	ListPosts string = "list-posts"
+
+	Sync string = "sync"
+	Conf string = "conf"
 )
 
 const BlogsDBPath = "blogs.sqlite3"
@@ -104,6 +109,9 @@ func (bn *BlogNotifier) CliHandling() error {
 
 	listPostFlagSet := flag.NewFlagSet(ListPosts, flag.ExitOnError)
 	listPostsSiteFlag := listPostFlagSet.String(Site, "", "Take a URL of a blog-site and output all the blog-posts corresponding to that blog-site")
+
+	syncFlagSet := flag.NewFlagSet(Sync, flag.ExitOnError)
+	syncConfFlag := syncFlagSet.String(Conf, "", "Path to YAML config file")
 
 	flag.Parse()
 
@@ -217,6 +225,181 @@ func (bn *BlogNotifier) CliHandling() error {
 		}
 	}
 
+	if len(os.Args) > 1 && os.Args[1] == Sync {
+		err := syncFlagSet.Parse(os.Args[2:])
+		if err != nil {
+			return fmt.Errorf("error parsing sync flags: %w", err)
+		}
+
+		if *syncConfFlag == "" {
+			return fmt.Errorf("for 'sync' sub-command, 'conf' flag cannot be empty")
+		}
+
+		err = bn.syncAndNotifyNewPosts(*syncConfFlag)
+		if err != nil {
+			return fmt.Errorf("error syncing and sending notifications: %w", err)
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func (bn *BlogNotifier) yamlFileToConfStruct(configFile string) (*Config, error) {
+	yamlData, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("file '%s' not found", configFile)
+	}
+
+	var config Config
+	err = yaml.Unmarshal(yamlData, &config)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal the config file '%s'", configFile)
+	}
+	return &config, nil
+}
+
+func (bn *BlogNotifier) syncAndNotifyNewPosts(configFile string) error {
+	config, err := bn.yamlFileToConfStruct(configFile)
+	if err != nil {
+		return fmt.Errorf("error parsing config file: %w", err)
+	}
+
+	siteLinks, err := bn.crawlSites()
+	if err != nil {
+		return fmt.Errorf("error crawling blog sites: %w", err)
+	}
+
+	for site, links := range siteLinks {
+		for _, link := range links {
+			isNewPost, err := bn.addNewPostIfNotExist(site, link)
+			if err != nil {
+				return fmt.Errorf("error adding post: %w", err)
+			}
+			if isNewPost {
+				err = bn.addMail(site, link)
+				if err != nil {
+					return fmt.Errorf("error creating mail: %w", err)
+				}
+			}
+		}
+		if len(links) > 0 {
+			err = bn.updateLastVisitedSite(site, links[len(links)-1])
+			if err != nil {
+				return fmt.Errorf("error updating last visited site: %w", err)
+			}
+		}
+	}
+
+	err = bn.sendNotifications(config)
+	if err != nil {
+		return fmt.Errorf("error sending notifications: %w", err)
+	}
+
+	return nil
+}
+
+func (bn *BlogNotifier) sendNotifications(config *Config) error {
+	unsentMails, err := bn.getUnsentMails()
+	if err != nil {
+		return err
+	}
+
+	deliveredMailIDChan := make(chan int, len(unsentMails))
+	errChan := make(chan error, len(unsentMails))
+	doneChan := make(chan bool)
+	closeChan := make(chan bool)
+	var wg sync.WaitGroup
+
+	for _, mail := range unsentMails {
+		wg.Add(1)
+		go func(m Mail) {
+			defer wg.Done()
+			err := bn.sendEmailNotification(config, m.Mail)
+			if err == nil {
+				deliveredMailIDChan <- int(m.ID)
+			} else {
+				errChan <- err
+			}
+		}(mail)
+	}
+
+	go func() {
+		wg.Wait()
+		close(deliveredMailIDChan)
+		close(errChan)
+		for {
+			select {
+			case _, ok := <-closeChan:
+				if !ok {
+					close(doneChan)
+					return
+				}
+			default:
+				doneChan <- true
+			}
+		}
+	}()
+
+	for {
+		select {
+		case mailID, isOpen := <-deliveredMailIDChan:
+			if !isOpen {
+				deliveredMailIDChan = nil
+			}
+			err = bn.markMailAsSent(uint(mailID))
+			if err != nil {
+				return err
+			}
+		case _, isOpen := <-errChan:
+			if !isOpen {
+				errChan = nil
+			}
+		case <-doneChan:
+			if deliveredMailIDChan == nil && errChan == nil {
+				close(closeChan)
+				return nil
+			}
+		}
+	}
+}
+
+func (bn *BlogNotifier) getUnsentMails() ([]Mail, error) {
+	var unsentMails []Mail
+	result := bn.db.Where("is_sent = ?", 0).Find(&unsentMails)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error fetching unsent mails: %w", result.Error)
+	}
+	return unsentMails, nil
+}
+
+func (bn *BlogNotifier) markMailAsSent(id uint) error {
+	result := bn.db.Model(&Mail{}).Where("id = ?", id).Update("is_sent", 1)
+	if result.Error != nil {
+		return fmt.Errorf("error marking mail as sent: %w", result.Error)
+	}
+	return nil
+}
+
+func (bn *BlogNotifier) sendEmailNotification(config *Config, message string) error {
+	parts := strings.Split(message, " ")
+	if len(parts) < 5 {
+		return fmt.Errorf("invalid message format")
+	}
+	link := parts[3]
+	site := parts[6]
+
+	subject := fmt.Sprintf("New blog-post %s on blog %s", link, site)
+	msg := []byte(fmt.Sprintf("%s", subject))
+
+	smtpServerAddr := fmt.Sprintf("%s:%d", config.Server.Host, config.Server.Port)
+	sender := config.Client.Email
+	recipient := config.Client.SendTo
+
+	err := smtp.SendMail(smtpServerAddr, nil, sender, []string{recipient}, msg)
+	if err != nil {
+		return fmt.Errorf("error sending email: %w", err)
+	}
 	return nil
 }
 
